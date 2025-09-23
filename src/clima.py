@@ -7,4 +7,4 @@ class Clima:
                             "rain_light", "rain",
                             "storm", "fog", "wind",
                             "heat", "cold" ]
-        
+   
