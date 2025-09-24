@@ -2,6 +2,24 @@
 # Courier Quest — EIF-207 (Ciclo II, 2025)
 
 
+
+# Notas:
+
+La ventana principal lo pa hice asi, pero si quieren 
+puede cambiar para que tengan otros colores o diseno de fondo y botones.
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Equipo:
 
 -Isaac Sibaja Cortes

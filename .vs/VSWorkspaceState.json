@@ -1,11 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\api_cache",
-    "\\data",
-    "\\src",
     "\\Views"
   ],
-  "SelectedNode": "\\Views\\menu_principal.py",
+  "SelectedNode": "\\main.py",
   "PreviewInSolutionExplorer": false
 }
