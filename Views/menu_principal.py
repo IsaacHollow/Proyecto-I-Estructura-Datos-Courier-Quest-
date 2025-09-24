@@ -1,16 +1,17 @@
 import arcade
-from arcade.gui import UIManager, UIFlatButton # Importa UIManager y UIFlatButton que son necesarios para los botones
-from .juego import Juego  
+from arcade.gui import UIManager, UIFlatButton  # Importa UIManager y UIFlatButton
+from .juego import Juego
 
 
-WIDTH = 800 # Ancho 
+WIDTH = 800  # Ancho
 HEIGHT = 600  # Alto
+
 
 class MenuPrincipal(arcade.View):
     def __init__(self):
         super().__init__()
-        self.ui_manager = UIManager # Inicializa el UIManager
-        self.ui_manager.enable() # Habilita el UIManager
+        self.ui_manager = UIManager()  # <-- Instanciamos correctamente
+        self.ui_manager.enable()       # Activamos el UIManager
 
     def setup(self):
         # Boton Jugar
@@ -25,17 +26,17 @@ class MenuPrincipal(arcade.View):
         boton_salir.center_y = HEIGHT // 2 - 100
         boton_salir.on_click = self.salir_juego
 
-        # Boton Reglas 
+        # Boton Reglas
         boton_reglas = UIFlatButton(text="Reglas", width=200, height=60)
         boton_reglas.center_x = WIDTH // 2 - 150
         boton_reglas.center_y = HEIGHT // 2
 
-        # Boton Creditos 
+        # Boton Creditos
         boton_creditos = UIFlatButton(text="Creditos", width=200, height=60)
         boton_creditos.center_x = WIDTH // 2 + 150
         boton_creditos.center_y = HEIGHT // 2 - 100
 
-        # Boton Puntajes 
+        # Boton Puntajes
         boton_puntaje = UIFlatButton(text="Puntajes", width=200, height=60)
         boton_puntaje.center_x = WIDTH // 2 + 150
         boton_puntaje.center_y = HEIGHT // 2
@@ -47,7 +48,6 @@ class MenuPrincipal(arcade.View):
         self.ui_manager.add(boton_creditos)
         self.ui_manager.add(boton_puntaje)
 
-   
     # Metodos de los botones
     def juego(self, event):
         self.window.show_view(Juego())
@@ -55,10 +55,11 @@ class MenuPrincipal(arcade.View):
     def salir_juego(self, event):
         arcade.close_window()
 
-
     # Dibuja la vista
     def on_draw(self):
         self.clear()
-        arcade.draw_text("Courier Quest", WIDTH // 2, HEIGHT - 100,
-                         arcade.color.WHITE, 40, anchor_x="center")
+        arcade.draw_text(
+            "Courier Quest", WIDTH // 2, HEIGHT - 100,
+            arcade.color.WHITE, 40, anchor_x="center"
+        )
         self.ui_manager.draw()

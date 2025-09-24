@@ -1,6 +1,6 @@
 import arcade
 from Views.menu_principal import MenuPrincipal
-from Views.juego import Juego
+
 
 
 WIDTH = 800
