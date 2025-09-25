@@ -5,7 +5,7 @@
 
 # Notas:
 
-La ventana principal lo pa hice asi, pero si quieren 
+La ventana principal lo hice asi, pero si quieren 
 puede cambiar para que tengan otros colores o diseno de fondo y botones.
 
 
@@ -23,7 +23,7 @@ puede cambiar para que tengan otros colores o diseno de fondo y botones.
 # Equipo:
 
 -Isaac Sibaja Cortes
--
+-Gabriel Quiros Villalobos
 -
 
 ______________________________________
@@ -32,7 +32,7 @@ ______________________________________
 # Motivo:  
 Despues de investigar en sitios web las posibles 
 librerias a usar (Arcade, Pygame, cocos2d, u otras) 
-decidimos elegir usar la libreria de Arcade para 
+decidimos usar la libreria Arcade para 
 realizar el proyecto por los siguientes motivos:
 
 -Es una biblioteca sencilla y facilita la creacion
