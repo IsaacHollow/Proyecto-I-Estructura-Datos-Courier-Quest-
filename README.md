@@ -23,6 +23,7 @@ puede cambiar para que tengan otros colores o diseno de fondo y botones.
 # Equipo:
 
 -Isaac Sibaja Cortes
+
 -Gabriel Quiros Villalobos
 -
 
