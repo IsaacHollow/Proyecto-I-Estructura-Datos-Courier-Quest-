@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Repartidor:
-    nombre: str
-    resistencia: int = 100
-    velocidad: int = 3
-    reputacion: int = 70
+    name: str
+    resistance: int = 100
+    speed: float = 3
+    reputation: int = 70
