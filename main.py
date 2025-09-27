@@ -1,16 +1,12 @@
 import arcade
 import requests
 import json
+from api_client import load_city_map
 from Views.menu_principal import MenuPrincipal
 
-def jprint(obj):
-    text = json.dumps(obj, sort_keys=True, indent=4)
-    print(text)
+city_map = load_city_map("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/map")
 
-response = requests.get("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/map")
-print(response.status_code)
-
-jprint(response.json())
+print(f"Mapa cargado: {city_map.city_name} ({city_map.width}x{city_map.height})")
 
 
 WIDTH = 800

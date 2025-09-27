@@ -1,10 +1,8 @@
+from dataclasses import dataclass
 
+@dataclass
 class Repartidor:
-    
-    def __init__ (self, nombre):
-        self.nombre = nombre
-        self.resistencia = 100
-        self.velocidad = 3
-        self.reputacion = 70
-
-        
+    nombre: str
+    resistencia: int = 100
+    velocidad: int = 3
+    reputacion: int = 70

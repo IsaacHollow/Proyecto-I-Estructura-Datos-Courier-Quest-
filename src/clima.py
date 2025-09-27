@@ -1,10 +1,14 @@
+from dataclasses import dataclass, field
+from typing import List
 
+@dataclass
 class Clima:
-    def __init__(self, temperatura, humedad, presion):
-        self.condition = "Clouds"
-        self.intensity = 0
-        self.conditions = [ "clear", "clouds",
-                            "rain_light", "rain",
-                            "storm", "fog", "wind",
-                            "heat", "cold" ]
-   
+    temperatura: float
+    humedad: float
+    presion: float
+    condition: str = "Clouds"
+    intensity: int = 0
+    conditions: List[str] = field(default_factory=lambda: [
+        "clear", "clouds", "rain_light", "rain",
+        "storm", "fog", "wind", "heat", "cold"
+    ])
