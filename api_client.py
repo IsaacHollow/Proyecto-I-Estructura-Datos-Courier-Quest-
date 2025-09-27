@@ -1,5 +1,8 @@
 import requests
 from src.mapa import TileType, Tile, CityMap
+from src.clima import Clima
+from src.pedidos import Pedido
+
 
 def load_city_map(url: str) -> CityMap:
     response = requests.get(url)
@@ -24,3 +27,24 @@ def load_city_map(url: str) -> CityMap:
         max_time=raw["max_time"],
         tiles=tile_matrix
     )
+
+def load_clima(url: str) -> Clima:
+    response = requests.get(url)
+    response.raise_for_status()
+    raw = response.json()["data"]
+
+    return Clima(
+        city=raw["city"],
+        condition=raw["initial"]["condition"],
+        intensity=raw["initial"]["intensity"],
+        conditions=raw["conditions"],
+        transition=raw["transition"]
+    )
+
+def load_pedidos(url: str) -> list[Pedido]:
+    response = requests.get(url)
+    response.raise_for_status()
+    raw = response.json()["data"]
+
+    pedidos = [Pedido(**item) for item in raw]
+    return pedidos

@@ -1,14 +1,10 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 
 @dataclass
 class Clima:
-    temperatura: float
-    humedad: float
-    presion: float
-    condition: str = "Clouds"
-    intensity: int = 0
-    conditions: List[str] = field(default_factory=lambda: [
-        "clear", "clouds", "rain_light", "rain",
-        "storm", "fog", "wind", "heat", "cold"
-    ])
+    city: str
+    condition: str
+    intensity: int
+    conditions: List[str] = field(default_factory=list)
+    transition: Dict[str, Dict[str, float]] = field(default_factory=dict)
