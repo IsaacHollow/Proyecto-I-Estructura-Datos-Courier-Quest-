@@ -2,24 +2,6 @@
 # Courier Quest — EIF-207 (Ciclo II, 2025)
 
 
-
-# Notas:
-
-La ventana principal lo hice asi, pero si quieren 
-puede cambiar para que tengan otros colores o diseno de fondo y botones.
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Equipo:
 
 Isaac Sibaja Cortes
@@ -27,7 +9,7 @@ Gabriel Quiros Villalobos
 -
 
 ______________________________________
-# Libreria escogida: Arcade
+# Libreria escogida: Pygame
 
 # Motivo:  
 Despues de investigar en sitios web las posibles 

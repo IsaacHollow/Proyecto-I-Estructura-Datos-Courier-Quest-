@@ -6,10 +6,20 @@
 
    # Prompts de IA 
 
+# Para instalar PyGame👇 
+
+https://chatgpt.com/share/68d9a0e4-29a0-800e-8c41-e0fe022ca45c
 
 
-# Sitios web y otros 
 
-# Para aprender sobre Arcade 👉 https://realpython.com/arcade-python-game-framework/
 
-# Tutoriales: https://api.arcade.academy/en/stable/tutorials/index.html
+
+# Youtube
+https://youtu.be/31TNvxUkFAc?si=Xv6GAMpllfB1ig53
+
+
+# Sitios Web
+https://www.pygame.org/docs/tut/newbieguide.html
+
+https://www.geeksforgeeks.org/python/pygame-tutorial/
+
