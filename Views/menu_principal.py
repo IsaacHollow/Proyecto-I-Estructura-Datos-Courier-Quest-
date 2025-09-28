@@ -1,6 +1,8 @@
 import arcade
 from arcade.gui import UIManager, UIFlatButton  # Importa UIManager y UIFlatButton
-from .juego import Juego
+
+from api_client import load_city_map
+
 
 
 WIDTH = 800  # Ancho
@@ -50,7 +52,9 @@ class MenuPrincipal(arcade.View):
 
     # Metodos de los botones
     def juego(self, event):
-        self.window.show_view(Juego())
+        city_map = load_city_map("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/map")
+        #view = CityMapView(city_map)
+        #self.window.show_view(CityMapView())
 
     def salir_juego(self, event):
         arcade.close_window()
