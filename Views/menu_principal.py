@@ -115,13 +115,10 @@ class MenuPrincipal:
 
     def jugarClick(self):
         """Accion al presionar Jugar"""
-        if callable(self.onJugar):
-            # Si se paso una funcion personalizada, se ejecuta
-            self.onJugar()
-            return
-        # Si no, se carga un mapa de ejemplo desde internet
         mapa = load_city_map(MAP_URL)
         print(f"Mapa cargado: {mapa.city_name} ({mapa.width}x{mapa.height})")
+        if callable(self.onJugar):
+            self.onJugar(mapa)
 
     def salirClick(self):
         """Accion al presionar Salir"""

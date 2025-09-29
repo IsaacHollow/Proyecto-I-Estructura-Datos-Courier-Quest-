@@ -3,12 +3,12 @@ import requests
 import json
 from api_client import load_city_map, load_clima, load_pedidos
 from Views.menu_principal import MenuPrincipal
+from Views.cityMap import CityMapView
 
-city_map = load_city_map("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/map")
 weather = load_clima("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/weather?city=TigerCity&mode=seed")
 pedidos = load_pedidos("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/jobs")
 
-print(f"Mapa cargado: {city_map.city_name} ({city_map.width}x{city_map.height})")
+#print(f"Mapa cargado: {city_map.city_name} ({city_map.width}x{city_map.height})")
 print(weather.city, weather.condition, weather.intensity)
 print(f"Se cargaron {len(pedidos)} pedidos")
 for p in pedidos:
@@ -23,8 +23,12 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption(TITLE)
 clock = pygame.time.Clock()
 
-def irAJuego():
-    print("Se pulsó Jugar! Aqui iría la vista del juego...")
+# Esta variable controlará la vista actual
+current_view = None
+
+def irAJuego(mapa):
+    global current_view
+    current_view = CityMapView(screen,mapa)
 
 
 menu = MenuPrincipal(screen, onJugar=irAJuego)
