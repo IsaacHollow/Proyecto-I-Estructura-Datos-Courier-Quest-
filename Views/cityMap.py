@@ -1,4 +1,5 @@
 import pygame
+from src.repartidor import Repartidor
 
 TILE_WIDTH = 20
 TILE_HEIGHT = 20
@@ -7,6 +8,7 @@ class CityMapView:
     def __init__(self, pantalla, city_map):
         self.pantalla = pantalla
         self.city_map = city_map
+        self.repartidor = Repartidor()
         self.sprites = {
             "street": pygame.image.load("assets/street.png").convert_alpha(),
             "park": pygame.image.load("assets/park.png").convert_alpha(),
@@ -71,10 +73,13 @@ class CityMapView:
             py = offset_y + min_y * TILE_HEIGHT
             self.pantalla.blit(sprite_scaled, (px, py))
 
+        self.pantalla.blit(self.repartidor.imagen, self.repartidor.rect)
+
     def manejarEvento(self, event):
         # Aquí puedes manejar eventos del mapa (teclado, mouse, etc)
         pass
 
     def actualizar(self):
+        teclas = pygame.key.get_pressed()
+        self.repartidor.mover(teclas)
         # Aquí puedes actualizar el estado del mapa si lo necesitas
-        pass

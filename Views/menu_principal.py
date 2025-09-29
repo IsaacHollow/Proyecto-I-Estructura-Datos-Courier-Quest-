@@ -1,5 +1,6 @@
 import pygame
 import pygame.freetype
+from src.repartidor import *
 from api_client import load_city_map
 
 # Dimensiones por defecto de la ventana
