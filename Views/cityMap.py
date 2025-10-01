@@ -14,6 +14,10 @@ class CityMapView:
             "park": pygame.image.load("assets/park.png").convert_alpha(),
             "building": pygame.image.load("assets/building.png").convert_alpha(),
         }
+
+        pygame.mixer.music.load("assets/music/game_theme.mp3")
+        pygame.mixer.music.play(-1)
+
         # Escala los sprites de calle y parque
         self.sprites["street"] = pygame.transform.scale(self.sprites["street"], (TILE_WIDTH, TILE_HEIGHT))
         self.sprites["park"] = pygame.transform.scale(self.sprites["park"], (TILE_WIDTH, TILE_HEIGHT))

@@ -4,6 +4,9 @@ import json
 from api_client import load_city_map, load_clima, load_pedidos
 from Views.menu_principal import MenuPrincipal
 from Views.cityMap import CityMapView
+from Views.pantalla_creditos import PantallaCreditos
+from Views.pantalla_reglas import PantallaReglas
+from Views.pantalla_puntaje import PantallaPuntaje
 
 # Cargar datos desde la API
 weather = load_clima("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/weather?city=TigerCity&mode=seed")
@@ -31,13 +34,24 @@ font = pygame.font.Font(None, 36)
 # Vista actual
 current_view = None
 
-def irAJuego(mapa):
+def irAJuego(parametro):
     global current_view
-    current_view = CityMapView(screen, mapa)
+    if parametro == "creditos":
+        current_view = PantallaCreditos(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
+    elif parametro == "reglas":
+        current_view = PantallaReglas(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
+    elif parametro == "puntajes":
+        current_view = PantallaPuntaje(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
+    else:
+        current_view = CityMapView(screen, parametro)
 
-# Crear menú principal
-menu = MenuPrincipal(screen, onJugar=irAJuego)
-current_view = menu
+
+def volverAlMenu():
+    global current_view
+    current_view = MenuPrincipal(screen, onJugar=irAJuego)
+
+# --- Iniciar en el menú principal ---
+volverAlMenu()
 
 # Bucle principal
 running = True
@@ -59,7 +73,7 @@ while running:
         screen.blit(pause_text, text_rect)
         pygame.display.flip()
         clock.tick(60)
-        continue  # no actualizar ni dibujar vista
+        continue
 
     current_view.actualizar()
     current_view.dibujar()
