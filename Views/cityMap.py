@@ -1,22 +1,25 @@
 import pygame
+
+from src.camera import Camera
 from src.repartidor import Repartidor
 
-TILE_WIDTH = 20
-TILE_HEIGHT = 20
+TILE_WIDTH = 50
+TILE_HEIGHT = 50
 
 class CityMapView:
     def __init__(self, pantalla, city_map):
+
         self.pantalla = pantalla
         self.city_map = city_map
-        self.repartidor = Repartidor()
+        self.repartidor = Repartidor(self.city_map.width * TILE_WIDTH, self.city_map.height * TILE_HEIGHT)
+
         self.sprites = {
             "street": pygame.image.load("assets/street.png").convert_alpha(),
             "park": pygame.image.load("assets/park.png").convert_alpha(),
             "building": pygame.image.load("assets/building.png").convert_alpha(),
         }
-
-        pygame.mixer.music.load("assets/music/game_theme.mp3")
-        pygame.mixer.music.play(-1)
+        # Instancia la camara
+        self.camera = Camera(self.pantalla, city_map.width * TILE_WIDTH, city_map.height * TILE_HEIGHT)
 
         # Escala los sprites de calle y parque
         self.sprites["street"] = pygame.transform.scale(self.sprites["street"], (TILE_WIDTH, TILE_HEIGHT))
@@ -24,6 +27,8 @@ class CityMapView:
 
         # Calcula los grupos de edificios al inicio
         self.building_groups = self.detect_building_groups()
+
+
 
     def detect_building_groups(self):
         """Detecta los grupos de tiles contiguos tipo 'building' y devuelve una lista de rectángulos"""
@@ -59,13 +64,15 @@ class CityMapView:
 
     def dibujar(self, offset_x=100, offset_y=0):
         # Dibuja primero calles y parques
+        # Al dibujar un tile se calcula su posicion en pixeles para llamar a camera.apply
         for y, row in enumerate(self.city_map.tiles):
             for x, tile in enumerate(row):
                 if tile.type.name != "building":
                     sprite = self.sprites[tile.type.name]
-                    px = offset_x + x * TILE_WIDTH
-                    py = offset_y + y * TILE_HEIGHT
-                    self.pantalla.blit(sprite, (px, py))
+                    px = x * TILE_WIDTH
+                    py = y * TILE_HEIGHT
+                    screen_x, screen_y = self.camera.apply((px, py))
+                    self.pantalla.blit(sprite, (screen_x, screen_y))
 
         # Dibuja cada grupo de edificio con una sola imagen escalada
         building_sprite = self.sprites["building"]
@@ -73,11 +80,15 @@ class CityMapView:
             width = (max_x - min_x + 1) * TILE_WIDTH
             height = (max_y - min_y + 1) * TILE_HEIGHT
             sprite_scaled = pygame.transform.scale(building_sprite, (width, height))
-            px = offset_x + min_x * TILE_WIDTH
-            py = offset_y + min_y * TILE_HEIGHT
-            self.pantalla.blit(sprite_scaled, (px, py))
+            px = min_x * TILE_WIDTH
+            py = min_y * TILE_HEIGHT
+            screen_x, screen_y = self.camera.apply((px, py))
+            self.pantalla.blit(sprite_scaled, (screen_x, screen_y))
 
-        self.pantalla.blit(self.repartidor.imagen, self.repartidor.rect)
+
+        # Para el repartidor hace lo mismo que con calles y parques:
+        screen_x, screen_y = self.camera.apply(self.repartidor.rect.topleft)
+        self.pantalla.blit(self.repartidor.imagen, (screen_x, screen_y))
 
     def manejarEvento(self, event):
         # Aquí puedes manejar eventos del mapa (teclado, mouse, etc)
@@ -86,4 +97,4 @@ class CityMapView:
     def actualizar(self):
         teclas = pygame.key.get_pressed()
         self.repartidor.mover(teclas)
-        # Aquí puedes actualizar el estado del mapa si lo necesitas
+        self.camera.center_on(self.repartidor.rect)

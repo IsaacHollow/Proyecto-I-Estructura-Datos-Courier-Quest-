@@ -23,6 +23,11 @@ https://youtu.be/31TNvxUkFAc?si=Xv6GAMpllfB1ig53
 
 https://www.youtube.com/watch?v=OvbOKNGZvoc
 
+
+# Camaras en pygame:
+https://www.youtube.com/watch?v=u7LPRqrzry8
+
+
 # Sitios Web
 https://www.pygame.org/docs/tut/newbieguide.html
 
