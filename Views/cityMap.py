@@ -18,6 +18,10 @@ class CityMapView:
             "park": pygame.image.load("assets/park.png").convert_alpha(),
             "building": pygame.image.load("assets/building.png").convert_alpha(),
         }
+
+        pygame.mixer.music.load("assets/music/game_theme.mp3")
+        pygame.mixer.music.play(-1)
+
         # Instancia la camara
         self.camera = Camera(self.pantalla, city_map.width * TILE_WIDTH, city_map.height * TILE_HEIGHT)
 
