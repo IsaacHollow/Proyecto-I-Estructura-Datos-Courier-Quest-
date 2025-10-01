@@ -73,6 +73,7 @@ class CityMapView:
             py = offset_y + min_y * TILE_HEIGHT
             self.pantalla.blit(sprite_scaled, (px, py))
 
+        # Dibuja el repartidor en el mapa
         self.pantalla.blit(self.repartidor.imagen, self.repartidor.rect)
 
     def manejarEvento(self, event):

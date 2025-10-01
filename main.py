@@ -6,14 +6,14 @@ from Views.menu_principal import MenuPrincipal
 from Views.cityMap import CityMapView
 
 # Cargar datos desde la API
-weather = load_clima("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/weather?city=TigerCity&mode=seed")
+'''weather = load_clima("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/weather?city=TigerCity&mode=seed")
 pedidos = load_pedidos("https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/jobs")
 
 print(weather.city, weather.condition, weather.intensity)
 print(f"Se cargaron {len(pedidos)} pedidos")
 for p in pedidos:
     print(f"{p.id} -> pickup {p.pickup}, dropoff {p.dropoff}, payout {p.payout}")
-
+'''
 # Configuración de ventana
 WIDTH = 800
 HEIGHT = 600
