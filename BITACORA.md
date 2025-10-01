@@ -23,6 +23,8 @@ https://youtu.be/31TNvxUkFAc?si=Xv6GAMpllfB1ig53
 
 https://www.youtube.com/watch?v=OvbOKNGZvoc
 
+https://www.youtube.com/watch?v=J3gZDqkk72Q
+
 
 # Camaras en pygame:
 https://www.youtube.com/watch?v=u7LPRqrzry8

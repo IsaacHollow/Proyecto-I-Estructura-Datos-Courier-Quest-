@@ -6,8 +6,6 @@ from Views.pantalla_creditos import PantallaCreditos
 from Views.pantalla_reglas import PantallaReglas
 from Views.pantalla_puntaje import PantallaPuntaje
 
-
-# Dimensiones por defecto de la ventana
 WIDTH_DEF = 800
 HEIGHT_DEF = 600
 # URL de donde se carga el mapa si se presiona "Jugar"
@@ -21,9 +19,6 @@ class MenuPrincipal:
         self.ancho = ancho
         self.alto = alto
         self.onJugar = onJugar  # Callback opcional cuando se presione "Jugar"
-
-        pygame.mixer.music.load("assets/music/menu_theme.mp3")
-        pygame.mixer.music.play(-1)
 
         # Colores en formato RGB (rojo, verde, azul)
         self.fondo = (18, 18, 30)        # Fondo oscuro
