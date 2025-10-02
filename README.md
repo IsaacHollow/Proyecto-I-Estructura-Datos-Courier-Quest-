@@ -1,6 +1,10 @@
 # Proyecto-I-Estructura-Datos-Courier-Quest-
 # Courier Quest — EIF-207 (Ciclo II, 2025)
 
+Deben	 incluir	 un	 archivo	 README.md	 con	 información	 general	 del	 proyecto,	
+incluyendo	las	estructuras	de	datos	que	utilizaron	y	para	qué	partes	del	programa.	
+Así	como	detalles	de	la	complejidad	algorítmica	
+
 
 # Equipo:
 
@@ -12,17 +16,11 @@ ______________________________________
 # Libreria escogida: Pygame
 
 # Motivo:  
-Despues de investigar en sitios web las posibles 
-librerias a usar (Arcade, Pygame, cocos2d, u otras) 
-decidimos usar la libreria Arcade para 
-realizar el proyecto por los siguientes motivos:
-
--Es una biblioteca sencilla y facilita la creacion
-de videojuegos 2D.
--Es facil de aprender y tiene buena documentacion.
--Incluye una biblioteca de tutoriales y ejemplos
-que nos van a ayudar durante el desarrollo del videojuego. 
+Despues de mirar varias opciones como Arcade o cocos2d, 
+elegimos Pygame porque es facil de usar, hay muchos ejemplos 
+y nos deja manejar bien los dibujos, sonidos y la logica del juego.
 _______________________________________
 
 
 # Fecha de entrega: 28 de septiembre de 2025
+# Nueva Fecha de entrega: 5 de octubre de 2025
