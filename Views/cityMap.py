@@ -1,7 +1,7 @@
 import pygame
 from src.camera import Camera
 from src.repartidor import Repartidor
-from src.weather import Clima
+from src.weather import weather
 
 TILE_WIDTH = 50
 TILE_HEIGHT = 50
@@ -17,9 +17,8 @@ class CityMapView:
         self.repartidor = Repartidor(self.city_map.width * TILE_WIDTH,
                                      self.city_map.height * TILE_HEIGHT)
 
-        self.weather = Clima()  # usamos Clima
+        self.weather = weather()  # usamos Clima
 
-        # Diccionario de sprites con nombres en español
         self.sprites = {
             "calle": pygame.image.load("assets/street.png").convert_alpha(),
             "parque": pygame.image.load("assets/park.png").convert_alpha(),
@@ -135,7 +134,7 @@ class CityMapView:
                 en_parque = True
 
         # Actualizar repartidor
-        self.repartidor.actualizar(teclas, dt, self.weather, TILE_WIDTH, 1.0, en_parque)
+        self.repartidor.mover(teclas, dt, self.weather, TILE_WIDTH, 1.0, en_parque)
 
         # Centrar cámara
         self.camera.center_on(self.repartidor.rect)

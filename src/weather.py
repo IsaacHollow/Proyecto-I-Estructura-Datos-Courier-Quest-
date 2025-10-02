@@ -1,13 +1,7 @@
 # src/weather.py
 import random
 
-class Clima:
-    """
-    Clase para controlar el clima:
-    - Cambia cada 45-60 s según una matriz de probabilidad.
-    - Cada clima tiene una intensidad 0..1.
-    - Hay transiciones suaves de 3..5 s.
-    """
+class weather:
 
     ESTADOS = [
         "despejado", "nublado", "llovizna", "lluvia",
@@ -65,7 +59,6 @@ class Clima:
         return base - (1.0 - base) * intensidad
 
     def actualizar(self, dt):
-        """Actualiza el clima en función del tiempo (segundos)."""
         if self.transicion:
             self.t_trans += dt
             t = min(self.t_trans / self.duracion_trans, 1.0)
@@ -91,17 +84,14 @@ class Clima:
                 self.estado_viejo = self.estado_actual
 
     def obtener_multiplicador(self):
-        """Devuelve el multiplicador actual de velocidad."""
         return self.mult_actual
 
     def obtener_extra_resistencia(self):
-        """Extra de consumo de resistencia por celda."""
         estado = self.estado_nuevo if (self.transicion and self.t_trans > 0) else self.estado_actual
         base = self.EXTRA_RES.get(estado, 0.0)
         return base * (1.0 + self.intensidad)
 
     def estado_y_intensidad(self):
-        """Devuelve el estado en español y su intensidad (0..1)."""
         if self.transicion and self.estado_nuevo:
             return f"{self.estado_viejo} → {self.estado_nuevo}", self.intensidad
         return self.estado_actual, self.intensidad
