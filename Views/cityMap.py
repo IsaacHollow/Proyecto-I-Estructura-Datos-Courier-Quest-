@@ -38,6 +38,15 @@ class CityMapView:
         # Calcula grupos de edificios
         self.building_groups = self.detect_building_groups()
 
+        # Crear una lista de Rects para las colisiones
+        self.building_rects = []
+        for min_x, min_y, max_x, max_y in self.building_groups:
+            px = min_x * TILE_WIDTH
+            py = min_y * TILE_HEIGHT
+            width = (max_x - min_x + 1) * TILE_WIDTH
+            height = (max_y - min_y + 1) * TILE_HEIGHT
+            self.building_rects.append(pygame.Rect(px, py, width, height))
+
         # Fuente para mostrar clima
         self.font = pygame.font.Font(None, 24)
 
@@ -134,7 +143,7 @@ class CityMapView:
                 en_parque = True
 
         # Actualizar repartidor
-        self.repartidor.mover(teclas, dt, self.weather, TILE_WIDTH, 1.0, en_parque)
+        self.repartidor.mover(teclas, dt, self.weather, TILE_WIDTH, 1.0, self.building_rects, en_parque)
 
         # Centrar cámara
         self.camera.center_on(self.repartidor.rect)

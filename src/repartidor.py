@@ -28,7 +28,7 @@ class Repartidor:
         self.peso_total = 0.0
         self.reputacion = 70.0
 
-    def mover(self, teclas, dt, clima, tam_tile, mult_superficie, en_parque=False):
+    def mover(self, teclas, dt, clima, tam_tile, mult_superficie,colliders, en_parque=False):
 
         # Calcula multiplicadores
         mult_peso = max(0.8, 1.0 - 0.03 * self.peso_total)
@@ -70,10 +70,29 @@ class Repartidor:
                 self.direccion = "abajo"
 
         # Aplicar movimiento
-        if dx != 0 or dy != 0:
+        movio = False
+        if dx != 0:
             self.rect.x += int(dx)
+            # Comprobar colisión en el eje X
+            if self.rect.collidelist(colliders) != -1:
+                # Si hay colisión, volver a la posición anterior
+                self.rect.x -= int(dx)
+            else:
+                movio = True
+
+        if dy != 0:
             self.rect.y += int(dy)
-            movio = True
+            # Comprobar colisión en el eje Y
+            if self.rect.collidelist(colliders) != -1:
+                self.rect.y -= int(dy)
+            else:
+                movio = True
+
+        # Limitar al mapa
+        self.rect.left = max(0, self.rect.left)
+        self.rect.right = min(self.ancho_mapa, self.rect.right)
+        self.rect.top = max(0, self.rect.top)
+        self.rect.bottom = min(self.alto_mapa, self.rect.bottom)
 
         # Actualizar resistencia
         if movio:

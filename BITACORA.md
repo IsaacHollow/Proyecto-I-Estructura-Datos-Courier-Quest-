@@ -26,8 +26,11 @@ https://www.youtube.com/watch?v=OvbOKNGZvoc
 https://www.youtube.com/watch?v=J3gZDqkk72Q
 
 
-# Camaras en pygame:
+Camaras en pygame:
 https://www.youtube.com/watch?v=u7LPRqrzry8
+
+Colisiones en pygame:
+https://www.youtube.com/watch?v=BHr9jxKithk
 
 
 # Sitios Web
