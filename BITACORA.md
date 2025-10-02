@@ -6,6 +6,10 @@
 
    # Prompts de IA 
 
+
+https://chatgpt.com/share/68dc7eeb-8a10-800e-a5a5-425fe83ac942
+
+
 # Para instalar PyGame👇 
 
 https://chatgpt.com/share/68d9a0e4-29a0-800e-8c41-e0fe022ca45c
@@ -18,6 +22,16 @@ https://chatgpt.com/share/68d9a0e4-29a0-800e-8c41-e0fe022ca45c
 https://youtu.be/31TNvxUkFAc?si=Xv6GAMpllfB1ig53
 
 https://www.youtube.com/watch?v=OvbOKNGZvoc
+
+https://www.youtube.com/watch?v=J3gZDqkk72Q
+
+
+Camaras en pygame:
+https://www.youtube.com/watch?v=u7LPRqrzry8
+
+Colisiones en pygame:
+https://www.youtube.com/watch?v=BHr9jxKithk
+
 
 # Sitios Web
 https://www.pygame.org/docs/tut/newbieguide.html

@@ -2,8 +2,10 @@ import pygame
 import pygame.freetype
 from src.repartidor import *
 from api_client import load_city_map
+from Views.pantalla_creditos import PantallaCreditos
+from Views.pantalla_reglas import PantallaReglas
+from Views.pantalla_puntaje import PantallaPuntaje
 
-# Dimensiones por defecto de la ventana
 WIDTH_DEF = 800
 HEIGHT_DEF = 600
 # URL de donde se carga el mapa si se presiona "Jugar"
@@ -44,13 +46,14 @@ class MenuPrincipal:
         sep = 22               # Espacio entre botones
 
         # Textos de los botones
-        textos = ["Jugar", "Reglas", "Puntajes", "Salir"]
+        textos = ["Jugar", "Reglas", "Puntajes", "Creditos","Salir",]
         # Funciones que se ejecutan al hacer click
         callbacks = [
             self.jugarClick,
-            lambda: print("Reglas: pendiente"),
-            lambda: print("Puntajes: pendiente"),
-            self.salirClick
+            self.reglasclick,
+            self.puntajeclick,
+            self.creditosClick,
+            self.salirClick,
         ]
 
         # Calculamos la posicion vertical inicial para centrar el menu
@@ -116,12 +119,21 @@ class MenuPrincipal:
 
     def jugarClick(self):
         """Accion al presionar Jugar"""
+        pygame.mixer.music.stop()
         mapa = load_city_map(MAP_URL)
         print(f"Mapa cargado: {mapa.city_name} ({mapa.width}x{mapa.height})")
         if callable(self.onJugar):
             self.onJugar(mapa)
 
+    def creditosClick(self):
+            self.onJugar("creditos")
+
+    def reglasclick(self):
+            self.onJugar("reglas")
+
+    def puntajeclick(self):
+        self.onJugar("puntajes")
+
     def salirClick(self):
-        """Accion al presionar Salir"""
         pygame.quit()
         exit()
