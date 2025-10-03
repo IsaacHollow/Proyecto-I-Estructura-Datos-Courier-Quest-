@@ -47,4 +47,18 @@ def load_pedidos(url: str) -> list[Pedido]:
     raw = response.json()["data"]
 
     pedidos = [Pedido(**item) for item in raw]
+
+    # Ajustes necesarios para el juego
+    for pedido in pedidos:
+        # sprite
+        pedido.sprite_path = "assets/package.png"
+        pedido.cargar_sprite()
+        # coordenadas tile
+        px, py = pedido.pickup
+        dx, dy = pedido.dropoff
+        pedido.pickup = (int(px), int(py))
+        pedido.dropoff = (int(dx), int(dy))
+        # estado inicial
+        pedido.status = "pendiente"
+
     return pedidos

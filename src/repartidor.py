@@ -1,24 +1,18 @@
 import pygame
-
+from src.inventario import Inventario
 
 class Repartidor:
+    """
+    Repartidor con resistencia y clima:
+    - Se recupera +5/s estando quieto
+    - Se recupera +10/s si está en parque
+    - Consume resistencia al moverse según base + peso + clima
+    - Si resistencia llega a 0, se mueve muy lento (Exhausto)
+    """
 
-    def __init__(self, start_tile_x, start_tile_y, tile_size):
-        self.tile_x = start_tile_x
-        self.tile_y = start_tile_y
-        self.tile_size = tile_size
-
-        self.px = float(start_tile_x * tile_size)
-        self.py = float(start_tile_y * tile_size)
-
-        self.is_moving = False
-        self.target_px = self.px
-        self.target_py = self.py
-
-        # v0 (velocidad base) en celdas por segundo
-        self.v0_celdas_por_seg = 3.0
-        # Velocidad de animación actual en píxeles por segundo. Se calculará dinámicamente.
-        self.move_speed_px_por_seg = 0
+    def __init__(self, ancho_mapa, alto_mapa):
+        self.ancho_mapa = ancho_mapa
+        self.alto_mapa = alto_mapa
 
         self.sprites = {
             "arriba": pygame.image.load("assets/bicycle_up.png").convert_alpha(),
@@ -28,125 +22,95 @@ class Repartidor:
         }
         self.direccion = "derecha"
         self.imagen = self.sprites[self.direccion]
+        self.rect = self.imagen.get_rect(center=(ancho_mapa // 2, alto_mapa // 2))
 
-        self.rect = self.imagen.get_rect(topleft=(self.px, self.py))
-
-        # Atributos para la fórmula
+        self.vel_base = 3.0  # velocidad base en px/frame
         self.resistencia = 100.0
-        self.peso_total = 0.0  # Como indicaste, se ignora por ahora (valor 0)
+        self.peso_total = 0.0
         self.reputacion = 70.0
-        self.exhausto = False
+        self.inventario = Inventario(peso_max=20)
 
-        self.movimiento_iniciado = False
+    def mover(self, teclas, dt, clima, tam_tile, mult_superficie,colliders, en_parque=False):
 
-    def start_move(self, dx, dy, city_map, colliders, clima):
-        """Inicia el movimiento y calcula la velocidad según la fórmula."""
-        if self.is_moving or self.exhausto:
-            return
+        # Calcula multiplicadores
+        mult_peso = max(0.8, 1.0 - 0.03 * self.peso_total)
+        mult_reputacion = 1.05 if getattr(self, "reputacion", 0) >= 90 else 1.0
 
-        next_tile_x = self.tile_x + dx
-        next_tile_y = self.tile_y + dy
-
-        if not (0 <= next_tile_x < city_map.width and 0 <= next_tile_y < city_map.height):
-            return
-
-        next_rect_check = pygame.Rect(
-            next_tile_x * self.tile_size,
-            next_tile_y * self.tile_size,
-            self.tile_size,
-            self.tile_size
-        )
-        if next_rect_check.collidelist(colliders) != -1:
-            return
-
-        # --- Implementación de la Fórmula de Velocidad ---
-
+        # Determinar velocidad según resistencia
         if self.resistencia > 30:
-            m_resistencia = 1.0  # Normal
+            vel_mult = 1.0  # Normal
+        elif 10 < self.resistencia <= 30:
+            vel_mult = 0.8  # Cansado
+        elif 0 < self.resistencia <= 10:
+            vel_mult = 0.05  # Exhausto casi detenido
         else:
-            m_resistencia = 0.8  # Cansado
+            vel_mult = 0.05  # También cuando resistencia = 0
 
-        # M_rep
-        m_rep = 1.03 if self.reputacion >= 90 else 1.0
+        mult_clima = clima.obtener_multiplicador() if hasattr(clima, "obtener_multiplicador") else 1.0
+        extra_clima = clima.obtener_extra_resistencia() if hasattr(clima, "obtener_extra_resistencia") else 0.0
 
-        # M_peso
-        m_peso = max(0.8, 1 - 0.03 * self.peso_total)
+        # Velocidad final en píxeles
+        vel_px = self.vel_base * tam_tile * vel_mult * mult_peso * mult_reputacion * mult_clima * mult_superficie
 
-        # M_clima
-        m_clima = clima.obtener_multiplicador() if hasattr(clima, "obtener_multiplicador") else 1.0
+        dx = dy = 0.0
+        movio = False
 
-        # surface_weight (del tile actual, ya que es donde se inicia el esfuerzo)
-        current_tile = city_map.tiles[self.tile_y][self.tile_x]
-        surface_weight = current_tile.type.surface_weight or 1.0
+        # Solo moverse si velocidad > 0
+        if vel_px > 0:
+            # Solo una dirección a la vez para evitar diagonales
+            if teclas[pygame.K_LEFT] and self.rect.left > 0:
+                dx = -vel_px * dt
+                self.direccion = "izquierda"
+            elif teclas[pygame.K_RIGHT] and self.rect.right < self.ancho_mapa:
+                dx = vel_px * dt
+                self.direccion = "derecha"
+            elif teclas[pygame.K_UP] and self.rect.top > 0:
+                dy = -vel_px * dt
+                self.direccion = "arriba"
+            elif teclas[pygame.K_DOWN] and self.rect.bottom < self.alto_mapa:
+                dy = vel_px * dt
+                self.direccion = "abajo"
 
-        # Fórmula final (v en celdas/seg)
-        v_celdas_por_seg = self.v0_celdas_por_seg * m_clima * m_peso * m_rep * m_resistencia * surface_weight
-
-        # Si la velocidad es 0, no nos movemos
-        if v_celdas_por_seg <= 0:
-            return
-
-        # Convertir a píxeles por segundo para la animación
-        self.move_speed_px_por_seg = v_celdas_por_seg * self.tile_size
-
-        # --- Fin de la Fórmula ---
-
-        self.target_px = next_tile_x * self.tile_size
-        self.target_py = next_tile_y * self.tile_size
-        self.is_moving = True
-        self.movimiento_iniciado = True
-
-        if dx > 0:
-            self.direccion = "derecha"
-        elif dx < 0:
-            self.direccion = "izquierda"
-        elif dy > 0:
-            self.direccion = "abajo"
-        elif dy < 0:
-            self.direccion = "arriba"
-        self.imagen = self.sprites[self.direccion]
-
-    def update(self, dt, clima, en_parque):
-        """Actualiza la posición (animación) y la resistencia."""
-        if self.is_moving:
-            if self.movimiento_iniciado:
-                consumo = 0.5
-                if self.peso_total > 3.0:
-                    consumo += 0.2 * (self.peso_total - 3.0)
-                extra_clima = clima.obtener_extra_resistencia() if hasattr(clima, "obtener_extra_resistencia") else 0.0
-                consumo += extra_clima
-                self.resistencia -= consumo
-                self.movimiento_iniciado = False
-
-            dx = self.target_px - self.px
-            dy = self.target_py - self.py
-            distance = (dx ** 2 + dy ** 2) ** 0.5
-
-            move_dist = self.move_speed_px_por_seg * dt
-
-            if distance < move_dist:
-                self.px = self.target_px
-                self.py = self.target_py
-                self.is_moving = False
-                self.tile_x = int(self.px // self.tile_size)
-                self.tile_y = int(self.py // self.tile_size)
+        # Aplicar movimiento
+        movio = False
+        if dx != 0:
+            self.rect.x += int(dx)
+            # Comprobar colisión en el eje X
+            if self.rect.collidelist(colliders) != -1:
+                # Si hay colisión, volver a la posición anterior
+                self.rect.x -= int(dx)
             else:
-                self.px += (dx / distance) * move_dist
-                self.py += (dy / distance) * move_dist
+                movio = True
 
-            self.rect.topleft = (round(self.px), round(self.py))
+        if dy != 0:
+            self.rect.y += int(dy)
+            # Comprobar colisión en el eje Y
+            if self.rect.collidelist(colliders) != -1:
+                self.rect.y -= int(dy)
+            else:
+                movio = True
 
+        # Limitar al mapa
+        self.rect.left = max(0, self.rect.left)
+        self.rect.right = min(self.ancho_mapa, self.rect.right)
+        self.rect.top = max(0, self.rect.top)
+        self.rect.bottom = min(self.alto_mapa, self.rect.bottom)
+
+        # Actualizar resistencia
+        if movio:
+            celdas = (abs(dx) + abs(dy)) / float(tam_tile)
+            if celdas > 0:
+                consumo = 0.5
+                if getattr(self, "peso_total", 0) > 3.0:
+                    consumo += 0.2 * (self.peso_total - 3.0)
+                consumo += extra_clima
+                self.resistencia -= consumo * celdas
         else:
             recuperacion = 10.0 if en_parque else 5.0
             self.resistencia += recuperacion * dt
 
-        if self.exhausto:
-            # Si está exhausto, comprobar si ya se recuperó al 30%
-            if self.resistencia >= 30:
-                self.exhausto = False
-        else:
-            # Si no está exhausto, comprobar si se acaba de agotar
-            if self.resistencia <= 0:
-                self.exhausto = True
-
+        # Limitar resistencia entre 0 y 100
         self.resistencia = min(100.0, max(0.0, self.resistencia))
+
+        # Actualizar sprite
+        self.imagen = self.sprites[self.direccion]

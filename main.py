@@ -6,12 +6,13 @@ from Views.juego import JuegoView
 from Views.pantalla_creditos import PantallaCreditos
 from Views.pantalla_reglas import PantallaReglas
 from Views.pantalla_puntaje import PantallaPuntaje
-from api_client import load_city_map
+from api_client import load_city_map, load_pedidos
 
 WIDTH = 800
 HEIGHT = 600
 TITLE = "Courier Quest"
 MAP_URL = "https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/map"
+PEDIDOS_URL = "https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/jobs"
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -32,9 +33,10 @@ def reproducir_musica(ruta):
 
 def irAJuego(parametro, **kwargs):
     global current_view
+    pedidos = load_pedidos(PEDIDOS_URL)
 
     if not isinstance(parametro, str):
-        current_view = JuegoView(screen, parametro, onJugar=irAJuego)
+        current_view = JuegoView(screen, parametro, pedidos, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
         return
 
@@ -55,10 +57,10 @@ def irAJuego(parametro, **kwargs):
         reproducir_musica("assets/music/menu_theme.mp3")
     elif parametro == "jugar":
         mapa = load_city_map(MAP_URL)
-        current_view = JuegoView(screen, mapa, onJugar=irAJuego)
+        current_view = JuegoView(screen, mapa, pedidos, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
     else:
-        current_view = JuegoView(screen, parametro, onJugar=irAJuego)
+        current_view = JuegoView(screen, parametro, pedidos, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
 
 def volverAlMenu():

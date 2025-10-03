@@ -10,9 +10,10 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
 class JuegoView:
-    def __init__(self, pantalla, city_map, onJugar):
+    def __init__(self, pantalla, city_map, pedidos_disponibles, onJugar):
         self.pantalla = pantalla
         self.city_map = city_map
+        self.pedidos_disponibles = pedidos_disponibles
         self.onJugar = onJugar
 
         start_tile_x = self.city_map.width // 2
@@ -111,6 +112,26 @@ class JuegoView:
             screen_x, screen_y = self.camera.apply((px, py))
             self.pantalla.blit(sprite_scaled, (screen_x, screen_y))
 
+         # Dibuja pedidos en el mapa
+        for pedido in self.pedidos_disponibles:
+            if not hasattr(pedido, "imagen"):
+                pedido.imagen = pygame.image.load(pedido.sprite_path).convert_alpha()
+                pedido.imagen = pygame.transform.scale(pedido.imagen, (TILE_WIDTH, TILE_HEIGHT))
+
+            # Si está pendiente, se dibuja en el pickup
+            if pedido.status == "pendiente":
+                px = pedido.pickup[0] * TILE_WIDTH
+                py = pedido.pickup[1] * TILE_HEIGHT
+                screen_x, screen_y = self.camera.apply((px, py))
+                self.pantalla.blit(pedido.imagen, (screen_x, screen_y))
+
+            # Si está en curso, opcionalmente se dibuja en el dropoff
+            elif pedido.status == "en curso":
+                px = pedido.dropoff[0] * TILE_WIDTH
+                py = pedido.dropoff[1] * TILE_HEIGHT
+                screen_x, screen_y = self.camera.apply((px, py))
+                self.pantalla.blit(pedido.imagen, (screen_x, screen_y))
+
         # Dibuja al repartidor
         screen_x, screen_y = self.camera.apply(self.repartidor.rect.topleft)
         self.pantalla.blit(self.repartidor.imagen, (screen_x, screen_y))
@@ -127,6 +148,24 @@ class JuegoView:
         texto_clima = f"Clima: {estado_clima} ({int(intensidad*100)}%)"
         text_surface = self.font.render(texto_clima, True, WHITE)
         self.pantalla.blit(text_surface, (offset_x, offset_y + 15))
+
+        # Pantalla de pedidos si presiona CTRL
+        teclas = pygame.key.get_pressed()
+        if teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL]:
+            overlay_rect = pygame.Rect(150, 50, 350, 220)
+            pygame.draw.rect(self.pantalla, (0, 0, 0), overlay_rect)       # Fondo negro
+            pygame.draw.rect(self.pantalla, (255, 255, 255), overlay_rect, 2)  # Borde blanco
+
+            y_offset = 70
+            self.pantalla.blit(self.font.render("Pedidos en curso:", True, WHITE), (160, 60))
+
+            if not self.repartidor.inventario.pedidos:
+                self.pantalla.blit(self.font.render("Inventario vacío", True, WHITE), (160, y_offset))
+            else:
+                for pedido in self.repartidor.inventario.pedidos:
+                    texto = f"ID:{pedido.id}  P:{pedido.priority}  Deadline:{pedido.deadline}"
+                    self.pantalla.blit(self.font.render(texto, True, WHITE), (160, y_offset))
+                    y_offset += 20
 
     def actualizar(self):
         dt = 1 / 60  # asumiendo 60 FPS
@@ -146,6 +185,20 @@ class JuegoView:
         # Actualizar clima
         self.weather.actualizar(dt)
 
+        # Revisar interacción con edificios
+        for grupo in self.building_groups:
+            if self.esta_adyacente(self.repartidor.rect, grupo):
+                for pedido in self.pedidos_disponibles:
+                    # Recoger
+                    if pedido.status == "pendiente" and pedido.pickup == (self.repartidor.tile_x, self.repartidor.tile_y):
+                        if self.repartidor.inventario.agregar_pedido(pedido):
+                            pedido.status = "en curso"
+                            print(f"Pedido {pedido.id} recogido ✅")
+                    # Entregar
+                    elif pedido.status == "en curso" and pedido.dropoff == (self.repartidor.tile_x, self.repartidor.tile_y):
+                        self.repartidor.inventario.entregar_pedido(pedido)
+                        print(f"Pedido {pedido.id} entregado ✅")
+
         # Revisar si el repartidor está en parque
         en_parque = False
 
@@ -162,3 +215,15 @@ class JuegoView:
 
         # Centrar cámara
         self.camera.center_on(self.repartidor.rect)
+
+    def esta_adyacente(self, rect_repartidor, grupo):
+        """
+        rect_repartidor: pygame.Rect del repartidor
+        grupo: (min_x, min_y, max_x, max_y)
+        Devuelve True si el repartidor está en un tile adyacente al grupo.
+        """
+        min_x, min_y, max_x, max_y = grupo
+        grupo_rect = pygame.Rect(min_x*TILE_WIDTH, min_y*TILE_HEIGHT, (max_x-min_x+1)*TILE_WIDTH, (max_y-min_y+1)*TILE_HEIGHT)
+        # Expandimos el rect para considerar adyacencia
+        grupo_rect.inflate_ip(TILE_WIDTH, TILE_HEIGHT)  # un tile extra por cada lado
+        return rect_repartidor.colliderect(grupo_rect)
