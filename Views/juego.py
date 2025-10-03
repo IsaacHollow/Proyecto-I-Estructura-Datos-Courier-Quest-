@@ -9,15 +9,17 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
-class CityMapView:
+class JuegoView:
     def __init__(self, pantalla, city_map, onJugar):
         self.pantalla = pantalla
         self.city_map = city_map
         self.onJugar = onJugar
-        self.repartidor = Repartidor(self.city_map.width * TILE_WIDTH,
-                                     self.city_map.height * TILE_HEIGHT)
 
-        self.weather = weather()  # usamos Clima
+        start_tile_x = self.city_map.width // 2
+        start_tile_y = self.city_map.height // 2
+        self.repartidor = Repartidor(start_tile_x, start_tile_y, TILE_WIDTH)
+
+        self.weather = weather()
 
         self.sprites = {
             "calle": pygame.image.load("assets/street.png").convert_alpha(),
@@ -127,23 +129,36 @@ class CityMapView:
         self.pantalla.blit(text_surface, (offset_x, offset_y + 15))
 
     def actualizar(self):
-        teclas = pygame.key.get_pressed()
         dt = 1 / 60  # asumiendo 60 FPS
+
+        if not self.repartidor.is_moving:
+            teclas = pygame.key.get_pressed()
+            # Pasamos self.weather a start_move
+            if teclas[pygame.K_LEFT]:
+                self.repartidor.start_move(-1, 0, self.city_map, self.building_rects, self.weather)
+            elif teclas[pygame.K_RIGHT]:
+                self.repartidor.start_move(1, 0, self.city_map, self.building_rects, self.weather)
+            elif teclas[pygame.K_UP]:
+                self.repartidor.start_move(0, -1, self.city_map, self.building_rects, self.weather)
+            elif teclas[pygame.K_DOWN]:
+                self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
         # Actualizar clima
         self.weather.actualizar(dt)
 
         # Revisar si el repartidor está en parque
         en_parque = False
-        tile_x = self.repartidor.rect.centerx // TILE_WIDTH
-        tile_y = self.repartidor.rect.centery // TILE_HEIGHT
+
+        # Usamos las coordenadas de tile del repartidor
+        tile_x = self.repartidor.tile_x
+        tile_y = self.repartidor.tile_y
         if 0 <= tile_x < self.city_map.width and 0 <= tile_y < self.city_map.height:
             tile = self.city_map.tiles[tile_y][tile_x]
             if tile.type.name == "parque":
                 en_parque = True
 
         # Actualizar repartidor
-        self.repartidor.mover(teclas, dt, self.weather, TILE_WIDTH, 1.0, self.building_rects, en_parque)
+        self.repartidor.update(dt, self.weather, en_parque)
 
         # Centrar cámara
         self.camera.center_on(self.repartidor.rect)
