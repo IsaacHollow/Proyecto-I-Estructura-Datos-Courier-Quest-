@@ -2,7 +2,7 @@ import pygame
 from Views.pantalla_victoria import PantallaVictoria
 from Views.pantalla_derrota import PantallaDerrota
 from Views.menu_principal import MenuPrincipal
-from Views.cityMap import CityMapView
+from Views.juego import JuegoView
 from Views.pantalla_creditos import PantallaCreditos
 from Views.pantalla_reglas import PantallaReglas
 from Views.pantalla_puntaje import PantallaPuntaje
@@ -34,7 +34,7 @@ def irAJuego(parametro, **kwargs):
     global current_view
 
     if not isinstance(parametro, str):
-        current_view = CityMapView(screen, parametro, onJugar=irAJuego)
+        current_view = JuegoView(screen, parametro, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
         return
 
@@ -55,10 +55,10 @@ def irAJuego(parametro, **kwargs):
         reproducir_musica("assets/music/menu_theme.mp3")
     elif parametro == "jugar":
         mapa = load_city_map(MAP_URL)
-        current_view = CityMapView(screen, mapa, onJugar=irAJuego)
+        current_view = JuegoView(screen, mapa, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
     else:
-        current_view = CityMapView(screen, parametro, onJugar=irAJuego)
+        current_view = JuegoView(screen, parametro, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
 
 def volverAlMenu():
@@ -76,7 +76,7 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE and isinstance(current_view, CityMapView):
+            if event.key == pygame.K_ESCAPE and isinstance(current_view, JuegoView):
                 paused = not paused
                 if paused:
                     reproducir_musica("assets/music/paused.wav")
