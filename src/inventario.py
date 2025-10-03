@@ -22,7 +22,7 @@ class Inventario:
         if pedido in self.pedidos:
             self.pedidos.remove(pedido)
             self.peso_total -= pedido.weight
-            pedido.status = "entregado"  # opcional
+            pedido.status = "entregado"
             return True
         return False
 

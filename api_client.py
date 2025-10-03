@@ -52,7 +52,6 @@ def load_pedidos(url: str) -> list[Pedido]:
     for pedido in pedidos:
         # sprite
         pedido.sprite_path = "assets/package.png"
-        pedido.cargar_sprite()
         # coordenadas tile
         px, py = pedido.pickup
         dx, dy = pedido.dropoff
