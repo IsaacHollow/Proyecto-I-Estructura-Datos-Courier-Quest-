@@ -1,5 +1,7 @@
 import pygame
 
+from src.inventario import Inventario
+
 
 class Repartidor:
 
@@ -33,11 +35,12 @@ class Repartidor:
 
         # Atributos para la fórmula
         self.resistencia = 100.0
-        self.peso_total = 0.0  # Como indicaste, se ignora por ahora (valor 0)
         self.reputacion = 70.0
         self.exhausto = False
 
         self.movimiento_iniciado = False
+
+        self.inventario = Inventario(peso_max=15.0)
 
     def start_move(self, dx, dy, city_map, colliders, clima):
         """Inicia el movimiento y calcula la velocidad según la fórmula."""
@@ -70,7 +73,7 @@ class Repartidor:
         m_rep = 1.03 if self.reputacion >= 90 else 1.0
 
         # M_peso
-        m_peso = max(0.8, 1 - 0.03 * self.peso_total)
+        m_peso = max(0.8, 1 - 0.03 * self.inventario.peso_total)
 
         # M_clima
         m_clima = clima.obtener_multiplicador() if hasattr(clima, "obtener_multiplicador") else 1.0
@@ -111,8 +114,8 @@ class Repartidor:
         if self.is_moving:
             if self.movimiento_iniciado:
                 consumo = 0.5
-                if self.peso_total > 3.0:
-                    consumo += 0.2 * (self.peso_total - 3.0)
+                if self.inventario.peso_total > 3.0:
+                    consumo += 0.2 * (self.inventario.peso_total - 3.0)
                 extra_clima = clima.obtener_extra_resistencia() if hasattr(clima, "obtener_extra_resistencia") else 0.0
                 consumo += extra_clima
                 self.resistencia -= consumo
