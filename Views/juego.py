@@ -1,4 +1,5 @@
 import pygame
+from datetime import datetime, timedelta
 from src.camera import Camera
 from src.repartidor import Repartidor
 from src.weather import weather
@@ -19,6 +20,7 @@ class JuegoView:
         self.city_map = city_map
         self.pedidos_disponibles = pedidos_disponibles
         self.onJugar = onJugar
+        self.tiempo_juego = datetime.utcnow().timestamp()
 
         start_tile_x = self.city_map.width // 2
         start_tile_y = self.city_map.height // 2
@@ -78,21 +80,20 @@ class JuegoView:
 
         # Dibuja pedidos en el mapa
         for pedido in self.pedidos_disponibles:
-            if not hasattr(pedido, "imagen") or pedido.imagen is None:
-                pedido.imagen = pygame.image.load(pedido.sprite_path).convert_alpha()
-                pedido.imagen = pygame.transform.scale(pedido.imagen, (PEDIDO_SIZE, PEDIDO_SIZE))
+            # Solo mostrar si el release_time ha pasado
+            if self.tiempo_juego < pedido.release_time:
+                continue
 
-            # Offset para centrar el paquete en el tile
+            if not hasattr(pedido, "imagen") or pedido.imagen is None:
+                pedido.cargar_sprite()
+
             offset_paquete = (TILE_WIDTH - PEDIDO_SIZE) // 2
 
-            # Si está pendiente, se dibuja en el pickup
             if pedido.status == "pendiente":
                 px = pedido.pickup[0] * TILE_WIDTH + offset_paquete
                 py = pedido.pickup[1] * TILE_HEIGHT + offset_paquete
                 screen_x, screen_y = self.camera.apply((px, py))
                 self.pantalla.blit(pedido.imagen, (screen_x, screen_y))
-
-            # Si está en curso, opcionalmente se dibuja en el dropoff
             elif pedido.status == "en curso":
                 px = pedido.dropoff[0] * TILE_WIDTH + offset_paquete
                 py = pedido.dropoff[1] * TILE_HEIGHT + offset_paquete
@@ -119,19 +120,63 @@ class JuegoView:
         # Pantalla de pedidos si presiona CTRL
         teclas = pygame.key.get_pressed()
         if teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL]:
-            overlay_rect = pygame.Rect(150, 50, 350, 220)
-            pygame.draw.rect(self.pantalla, (0, 0, 0), overlay_rect)  # Fondo negro
-            pygame.draw.rect(self.pantalla, (255, 255, 255), overlay_rect, 2)  # Borde blanco
+            pedidos_inventario = self.repartidor.inventario.pedidos
 
-            y_offset = 70
-            self.pantalla.blit(self.font.render("Pedidos en curso:", True, WHITE), (160, 60))
+            # Overlay fijo
+            ancho_overlay = 500
+            alto_overlay = 300
+            x_overlay = 150
+            y_overlay = 50
+            padding = 10
 
-            if not self.repartidor.inventario.pedidos:
-                self.pantalla.blit(self.font.render("Inventario vacío", True, WHITE), (160, y_offset))
+            overlay = pygame.Surface((ancho_overlay, alto_overlay), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            self.pantalla.blit(overlay, (x_overlay, y_overlay))
+
+            # Título
+            y_offset = y_overlay + 10
+            self.pantalla.blit(self.font.render("Pedidos en curso", True, WHITE), (x_overlay + padding, y_offset))
+            pygame.draw.line(
+                self.pantalla,
+                WHITE,
+                (x_overlay + padding, y_offset + 20),
+                (x_overlay + ancho_overlay - padding, y_offset + 20),
+                2
+            )
+            y_offset += 30
+
+            if not pedidos_inventario:
+                self.pantalla.blit(self.font.render("Inventario vacío", True, WHITE), (x_overlay + padding, y_offset))
             else:
-                for pedido in self.repartidor.inventario.pedidos:
-                    texto = f"ID:{pedido.id}  P:{pedido.priority}  Deadline:{pedido.deadline}"
-                    self.pantalla.blit(self.font.render(texto, True, WHITE), (160, y_offset))
+                for pedido in pedidos_inventario:
+                    # Mostrar solo pedidos que ya se liberaron
+                    if self.tiempo_juego < pedido.release_time:
+                        continue
+
+                    # Convertir release_time a hora:minutos
+                    release_dt = datetime.utcfromtimestamp(pedido.release_time)
+                    release_str = release_dt.strftime("%H:%M")
+
+                    # Formatear deadline solo hora:minutos
+                    deadline_iso = pedido.deadline.rstrip("Z")
+                    deadline_dt = datetime.strptime(deadline_iso, "%Y-%m-%dT%H:%M")
+                    deadline_str = deadline_dt.strftime("%H:%M")
+
+                    # Color según urgencia (tiempo restante hasta deadline)
+                    tiempo_restante_min = (deadline_dt - datetime.utcfromtimestamp(self.tiempo_juego)).total_seconds() / 60
+                    if tiempo_restante_min <= 5:
+                        color = (255, 0, 0)
+                    elif tiempo_restante_min <= 15:
+                        color = (255, 255, 0)
+                    else:
+                        color = (0, 255, 0)
+
+                    # Mostrar como columnas
+                    texto = (
+                        f"{pedido.id:<3} | P:{pedido.priority:<2} | W:{pedido.weight:<4} "
+                        f"| {pedido.pickup}->{pedido.dropoff} | D:{deadline_str} | R:{release_str}"
+                    )
+                    self.pantalla.blit(self.font.render(texto, True, color), (x_overlay + padding, y_offset))
                     y_offset += 20
 
     def estan_adyacentes(self, pos1, pos2):
@@ -153,17 +198,21 @@ class JuegoView:
             if pedido.status == "pendiente" and self.estan_adyacentes(pos_repartidor, pedido.pickup):
                 if self.repartidor.inventario.agregar_pedido(pedido):
                     pedido.status = "en curso"
+                    pedido.cargar_sprite()
                     print(f"Pedido {pedido.id} recogido ")
                     return  # Salimos para interactuar con un solo pedido a la vez
 
             # Intentar entregar
             elif pedido.status == "en curso" and self.estan_adyacentes(pos_repartidor, pedido.dropoff):
                 if self.repartidor.inventario.entregar_pedido(pedido):
+                    pedido.status = "entregado"
+                    pedido.imagen = None
                     print(f"Pedido {pedido.id} entregado ")
                     return  # Salimos para interactuar con un solo pedido a la vez
 
     def actualizar(self):
         dt = 1 / 60  # asumiendo 60 FPS
+        self.tiempo_juego += dt
 
         if not self.repartidor.is_moving:
             teclas = pygame.key.get_pressed()

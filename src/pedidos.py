@@ -13,7 +13,8 @@ class Pedido:
     pickup: Tuple[int, int]
     dropoff: Tuple[int, int]
     status: str = "pendiente"     # pendiente, en curso, entregado
-    sprite_path: str = "assets/package.png"
+    sprite_pickup: str = "assets/package.png"
+    sprite_dropoff: str = "assets/destination_marker.png"
     imagen: Optional[pygame.Surface] = field(default=None)
 
     # Métodos auxiliares
@@ -26,6 +27,13 @@ class Pedido:
         return max(0, self.deadline - tiempo_actual)
     
     def cargar_sprite(self):
-        if self.imagen is None:
-            self.imagen = pygame.image.load(self.sprite_path).convert_alpha()
-            self.imagen = pygame.transform.scale(self.imagen, (50, 50))  # tamaño tile
+        if self.status == "pendiente":
+            ruta = self.sprite_pickup
+        elif self.status == "en curso":
+            ruta = self.sprite_dropoff
+        else:
+            self.imagen = None
+            return
+        
+        self.imagen = pygame.image.load(ruta).convert_alpha()
+        self.imagen = pygame.transform.scale(self.imagen, (25, 25))
