@@ -2,6 +2,10 @@ import pygame
 
 from src.inventario import Inventario
 
+# 1. Definimos un tamaño fijo para el repartidor.
+REPARTIDOR_ANCHO = 25
+REPARTIDOR_ALTO = 25
+
 
 class Repartidor:
 
@@ -17,26 +21,36 @@ class Repartidor:
         self.target_px = self.px
         self.target_py = self.py
 
-        # v0 (velocidad base) en celdas por segundo
         self.v0_celdas_por_seg = 3.0
-        # Velocidad de animación actual en píxeles por segundo. Se calculará dinámicamente.
         self.move_speed_px_por_seg = 0
 
-        self.sprites = {
+        # Cargamos las imágenes originales
+        sprites_orig = {
             "arriba": pygame.image.load("assets/bicycle_up.png").convert_alpha(),
             "abajo": pygame.image.load("assets/bicycle_down.png").convert_alpha(),
             "izquierda": pygame.image.load("assets/bicycle_left.png").convert_alpha(),
             "derecha": pygame.image.load("assets/bicycle_right.png").convert_alpha()
         }
+
+        # 2. Escalamos todos los sprites al nuevo tamaño definido arriba
+        self.sprites = {}
+        for key, sprite in sprites_orig.items():
+            self.sprites[key] = pygame.transform.scale(sprite, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+
         self.direccion = "derecha"
         self.imagen = self.sprites[self.direccion]
 
-        self.rect = self.imagen.get_rect(topleft=(self.px, self.py))
+        # 3. Ajustamos el rect para que el repartidor se dibuje centrado en su celda.
+        #    Calculamos el desfase necesario para centrar la imagen pequeña en la celda grande.
+        offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
+        offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
+        self.rect = self.imagen.get_rect(topleft=(self.px + offset_x, self.py + offset_y))
 
         # Atributos para la fórmula
         self.resistencia = 100.0
         self.reputacion = 70.0
         self.exhausto = False
+        self.puntaje = 0  # Añadido para el puntaje
 
         self.movimiento_iniciado = False
 
@@ -63,35 +77,20 @@ class Repartidor:
             return
 
         # --- Implementación de la Fórmula de Velocidad ---
-
-        if self.resistencia > 30:
-            m_resistencia = 1.0  # Normal
-        else:
-            m_resistencia = 0.8  # Cansado
-
-        # M_rep
+        m_resistencia = 0.8 if self.resistencia <= 30 else 1.0
         m_rep = 1.03 if self.reputacion >= 90 else 1.0
-
-        # M_peso
         m_peso = max(0.8, 1 - 0.03 * self.inventario.peso_total)
+        m_clima = clima.obtener_multiplicador()
 
-        # M_clima
-        m_clima = clima.obtener_multiplicador() if hasattr(clima, "obtener_multiplicador") else 1.0
-
-        # surface_weight (del tile actual, ya que es donde se inicia el esfuerzo)
         current_tile = city_map.tiles[self.tile_y][self.tile_x]
         surface_weight = current_tile.type.surface_weight or 1.0
 
-        # Fórmula final (v en celdas/seg)
         v_celdas_por_seg = self.v0_celdas_por_seg * m_clima * m_peso * m_rep * m_resistencia * surface_weight
 
-        # Si la velocidad es 0, no nos movemos
         if v_celdas_por_seg <= 0:
             return
 
-        # Convertir a píxeles por segundo para la animación
         self.move_speed_px_por_seg = v_celdas_por_seg * self.tile_size
-
         # --- Fin de la Fórmula ---
 
         self.target_px = next_tile_x * self.tile_size
@@ -113,18 +112,14 @@ class Repartidor:
         """Actualiza la posición (animación) y la resistencia."""
         if self.is_moving:
             if self.movimiento_iniciado:
-                consumo = 0.5
-                if self.inventario.peso_total > 3.0:
-                    consumo += 0.2 * (self.inventario.peso_total - 3.0)
-                extra_clima = clima.obtener_extra_resistencia() if hasattr(clima, "obtener_extra_resistencia") else 0.0
-                consumo += extra_clima
+                consumo = 0.5 + (0.2 * (self.inventario.peso_total - 3.0) if self.inventario.peso_total > 3.0 else 0)
+                consumo += clima.obtener_extra_resistencia()
                 self.resistencia -= consumo
                 self.movimiento_iniciado = False
 
             dx = self.target_px - self.px
             dy = self.target_py - self.py
             distance = (dx ** 2 + dy ** 2) ** 0.5
-
             move_dist = self.move_speed_px_por_seg * dt
 
             if distance < move_dist:
@@ -137,19 +132,19 @@ class Repartidor:
                 self.px += (dx / distance) * move_dist
                 self.py += (dy / distance) * move_dist
 
-            self.rect.topleft = (round(self.px), round(self.py))
+            # 4. Al actualizar la posición del rect, volvemos a aplicar el desfase para mantenerlo centrado.
+            offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
+            offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
+            self.rect.topleft = (round(self.px) + offset_x, round(self.py) + offset_y)
 
-        else:
+        else:  # No se está moviendo
             recuperacion = 10.0 if en_parque else 5.0
             self.resistencia += recuperacion * dt
 
-        if self.exhausto:
-            # Si está exhausto, comprobar si ya se recuperó al 30%
-            if self.resistencia >= 30:
-                self.exhausto = False
-        else:
-            # Si no está exhausto, comprobar si se acaba de agotar
-            if self.resistencia <= 0:
-                self.exhausto = True
+        # Manejo del estado de exhausto
+        if self.exhausto and self.resistencia >= 30:
+            self.exhausto = False
+        elif not self.exhausto and self.resistencia <= 0:
+            self.exhausto = True
 
         self.resistencia = min(100.0, max(0.0, self.resistencia))

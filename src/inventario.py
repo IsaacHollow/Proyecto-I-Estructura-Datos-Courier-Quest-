@@ -1,5 +1,7 @@
 from typing import List, Optional
 from src.pedidos import Pedido
+from datetime import datetime, timezone
+
 
 class Inventario:
     def __init__(self, peso_max: float):
@@ -20,39 +22,97 @@ class Inventario:
     def entregar_pedido(self, pedido: Pedido) -> bool:
         """Elimina un pedido del inventario y descuenta el peso."""
         if pedido in self.pedidos:
+            try:
+                idx_a_eliminar = self.pedidos.index(pedido)
+            except ValueError:
+                return False
+
             self.pedidos.remove(pedido)
             self.peso_total -= pedido.weight
-            pedido.status = "entregado"
+
+            # Ajustar el cursor de forma segura
+            if self.cursor > idx_a_eliminar:
+                self.cursor -= 1
+            if self.cursor >= len(self.pedidos) and len(self.pedidos) > 0:
+                self.cursor = len(self.pedidos) - 1
+
             return True
         return False
 
     # Recorrido con cursor
     def actual(self) -> Optional[Pedido]:
+        """Devuelve el pedido actualmente seleccionado por el cursor."""
         if not self.pedidos:
             return None
+        if self.cursor < 0 or self.cursor >= len(self.pedidos):
+            self.cursor = 0
+            if not self.pedidos: return None
         return self.pedidos[self.cursor]
 
-    def siguiente(self) -> Optional[Pedido]:
-        if not self.pedidos:
-            return None
-        self.cursor = (self.cursor + 1) % len(self.pedidos)
-        return self.actual()
+    def siguiente(self, vista_actual: List[Pedido]):
+        """Mueve el cursor al siguiente pedido en la vista actual."""
+        if not vista_actual:
+            return
 
-    def anterior(self) -> Optional[Pedido]:
-        if not self.pedidos:
-            return None
-        self.cursor = (self.cursor - 1) % len(self.pedidos)
-        return self.actual()
+        pedido_actual = self.actual()
+        try:
+            idx_en_vista = vista_actual.index(pedido_actual)
+            nuevo_idx_en_vista = (idx_en_vista + 1) % len(vista_actual)
+            nuevo_pedido = vista_actual[nuevo_idx_en_vista]
+            self.cursor = self.pedidos.index(nuevo_pedido)
+        except (ValueError, IndexError):
+            if self.pedidos:
+                self.cursor = self.pedidos.index(vista_actual[0])
 
+    def anterior(self, vista_actual: List[Pedido]):
+        """Mueve el cursor al pedido anterior en la vista actual."""
+        if not vista_actual:
+            return
+
+        pedido_actual = self.actual()
+        try:
+            idx_en_vista = vista_actual.index(pedido_actual)
+            nuevo_idx_en_vista = (idx_en_vista - 1) % len(vista_actual)
+            nuevo_pedido = vista_actual[nuevo_idx_en_vista]
+            self.cursor = self.pedidos.index(nuevo_pedido)
+        except (ValueError, IndexError):
+            if self.pedidos:
+                self.cursor = self.pedidos.index(vista_actual[0])
+
+    def _insertion_sort(self, lista: List[Pedido], key, reverse=False) -> List[Pedido]:
+        arr = list(lista)
+        for i in range(1, len(arr)):
+            elemento_actual = arr[i]
+            j = i - 1
+            if not reverse:
+                while j >= 0 and key(elemento_actual) < key(arr[j]):
+                    arr[j + 1] = arr[j]
+                    j -= 1
+            else:
+                while j >= 0 and key(elemento_actual) > key(arr[j]):
+                    arr[j + 1] = arr[j]
+                    j -= 1
+            arr[j + 1] = elemento_actual
+        return arr
 
     # Vistas de pedidos
     def ver_por_prioridad(self) -> List[Pedido]:
         """Devuelve los pedidos ordenados de mayor a menor prioridad."""
-        return sorted(self.pedidos, key=lambda p: p.priority, reverse=True)
+        return self._insertion_sort(self.pedidos, key=lambda p: p.priority, reverse=True)
 
     def ver_por_deadline(self) -> List[Pedido]:
         """Devuelve los pedidos ordenados por deadline (más temprano primero)."""
-        return sorted(self.pedidos, key=lambda p: p.deadline)
+        # Como 'deadline' ahora es un entero (segundos), el sort es directo.
+        return self._insertion_sort(self.pedidos, key=lambda p: p.deadline, reverse=False)
+
+    def obtener_vista_actual(self, vista: str) -> List[Pedido]:
+        """Devuelve la lista de pedidos según la vista seleccionada."""
+        if vista == "prioridad":
+            return self.ver_por_prioridad()
+        elif vista == "deadline":
+            return self.ver_por_deadline()
+        else:  # "normal" o cualquier otro caso
+            return list(self.pedidos)
 
     # Utilidades
     def esta_lleno(self) -> bool:
