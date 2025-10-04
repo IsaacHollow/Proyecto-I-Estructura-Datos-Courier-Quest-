@@ -1,11 +1,9 @@
+# src/repartidor.py
 import pygame
-
 from src.inventario import Inventario
 
-# 1. Definimos un tamaño fijo para el repartidor.
 REPARTIDOR_ANCHO = 25
 REPARTIDOR_ALTO = 25
-
 
 class Repartidor:
 
@@ -24,7 +22,6 @@ class Repartidor:
         self.v0_celdas_por_seg = 3.0
         self.move_speed_px_por_seg = 0
 
-        # Cargamos las imágenes originales
         sprites_orig = {
             "arriba": pygame.image.load("assets/bicycle_up.png").convert_alpha(),
             "abajo": pygame.image.load("assets/bicycle_down.png").convert_alpha(),
@@ -32,7 +29,6 @@ class Repartidor:
             "derecha": pygame.image.load("assets/bicycle_right.png").convert_alpha()
         }
 
-        # 2. Escalamos todos los sprites al nuevo tamaño definido arriba
         self.sprites = {}
         for key, sprite in sprites_orig.items():
             self.sprites[key] = pygame.transform.scale(sprite, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
@@ -40,22 +36,46 @@ class Repartidor:
         self.direccion = "derecha"
         self.imagen = self.sprites[self.direccion]
 
-        # 3. Ajustamos el rect para que el repartidor se dibuje centrado en su celda.
-        #    Calculamos el desfase necesario para centrar la imagen pequeña en la celda grande.
         offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
         offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
         self.rect = self.imagen.get_rect(topleft=(self.px + offset_x, self.py + offset_y))
 
-        # Atributos para la fórmula
+        # Atributos de juego
         self.resistencia = 100.0
         self.reputacion = 70.0
         self.exhausto = False
-        self.puntaje = 0  # Añadido para el puntaje
+        self.puntaje = 0
 
         self.movimiento_iniciado = False
 
         self.inventario = Inventario(peso_max=15.0)
 
+        # NUEVO: racha de entregas sin penalización (para bono)
+        self.racha_sin_penalizacion = 0
+
+    # método para aplicar cambios de reputación
+    def aplicar_reputacion(self, delta):
+        """
+        Aplica delta a la reputación, la clampa entre 0 y 100.
+        Devuelve True si la reputación queda por debajo de 20 (derrota).
+        """
+        self.reputacion += delta
+        # clamp
+        if self.reputacion > 100.0:
+            self.reputacion = 100.0
+        if self.reputacion < 0.0:
+            self.reputacion = 0.0
+
+        # si baja de 20 -> derrota inmediata
+        if self.reputacion < 20.0:
+            return True
+        return False
+
+    def obtener_multiplicador_pago(self):
+        """Multiplicador por reputación alta (>=90 => +5%)."""
+        return 1.05 if self.reputacion >= 90.0 else 1.0
+
+    # === Métodos de movimiento y resistencia (tu lógica original) ===
     def start_move(self, dx, dy, city_map, colliders, clima):
         """Inicia el movimiento y calcula la velocidad según la fórmula."""
         if self.is_moving or self.exhausto:
@@ -76,7 +96,7 @@ class Repartidor:
         if next_rect_check.collidelist(colliders) != -1:
             return
 
-        # --- Implementación de la Fórmula de Velocidad ---
+        # --- Fórmula de Velocidad ---
         m_resistencia = 0.8 if self.resistencia <= 30 else 1.0
         m_rep = 1.03 if self.reputacion >= 90 else 1.0
         m_peso = max(0.8, 1 - 0.03 * self.inventario.peso_total)
@@ -91,7 +111,7 @@ class Repartidor:
             return
 
         self.move_speed_px_por_seg = v_celdas_por_seg * self.tile_size
-        # --- Fin de la Fórmula ---
+        # --- Fin fórmula ---
 
         self.target_px = next_tile_x * self.tile_size
         self.target_py = next_tile_y * self.tile_size
@@ -114,6 +134,7 @@ class Repartidor:
             if self.movimiento_iniciado:
                 consumo = 0.5 + (0.2 * (self.inventario.peso_total - 3.0) if self.inventario.peso_total > 3.0 else 0)
                 consumo += clima.obtener_extra_resistencia()
+                # consumo aplicado por movimiento a la CELDA (según tu implementación)
                 self.resistencia -= consumo
                 self.movimiento_iniciado = False
 
@@ -129,19 +150,19 @@ class Repartidor:
                 self.tile_x = int(self.px // self.tile_size)
                 self.tile_y = int(self.py // self.tile_size)
             else:
+                # movimiento interpolado (esto puede dar movimiento diagonal si dx & dy simultáneos; tu start_move evita diagonales)
                 self.px += (dx / distance) * move_dist
                 self.py += (dy / distance) * move_dist
 
-            # 4. Al actualizar la posición del rect, volvemos a aplicar el desfase para mantenerlo centrado.
             offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
             offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
             self.rect.topleft = (round(self.px) + offset_x, round(self.py) + offset_y)
 
-        else:  # No se está moviendo
+        else:
             recuperacion = 10.0 if en_parque else 5.0
             self.resistencia += recuperacion * dt
 
-        # Manejo del estado de exhausto
+        # Manejo exhausto <-> recuperado
         if self.exhausto and self.resistencia >= 30:
             self.exhausto = False
         elif not self.exhausto and self.resistencia <= 0:

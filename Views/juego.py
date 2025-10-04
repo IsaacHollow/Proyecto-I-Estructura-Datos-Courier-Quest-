@@ -143,24 +143,46 @@ class JuegoView:
             self.dibujar_inventario_overlay()
 
     def dibujar_ui(self, offset_x, offset_y):
-        # Barra de resistencia
         barra_ancho = 100
         barra_alto = 10
         resistencia_ratio = self.repartidor.resistencia / 100
         pygame.draw.rect(self.pantalla, RED, (offset_x, offset_y, barra_ancho, barra_alto))
         pygame.draw.rect(self.pantalla, GREEN, (offset_x, offset_y, barra_ancho * resistencia_ratio, barra_alto))
 
-        # Texto de clima
-        estado_clima, intensidad = self.weather.estado_y_intensidad()
-        texto_clima = f"Clima: {estado_clima} ({int(intensidad * 100)}%)"
+        #Clima
+        estado_clima, _ = self.weather.estado_y_intensidad()
+        texto_clima = f"Clima: {estado_clima}"
         self.pantalla.blit(self.font.render(texto_clima, True, WHITE), (offset_x, offset_y + 15))
 
-        # Dibujamos el texto de ayuda en la parte inferior de la pantalla.
+        #Punatje
+        texto_puntaje = f"Puntaje: {self.repartidor.puntaje}"
+        self.pantalla.blit(self.font.render(texto_puntaje, True, YELLOW), (offset_x, offset_y + 35))
+
+        # Resistencia
+        rep_bar_width = 100
+        rep_bar_height = 10
+        screen_w, _ = self.pantalla.get_size()
+
+        rep_ratio = self.repartidor.reputacion / 100
+        bar_x = screen_w - rep_bar_width - 20  # 20 px desde el borde derecho
+        bar_y = 20  # un poco arriba
+
+        pygame.draw.rect(self.pantalla, (100, 100, 100), (bar_x, bar_y, rep_bar_width, rep_bar_height))
+        pygame.draw.rect(self.pantalla, YELLOW, (bar_x, bar_y, rep_bar_width * rep_ratio, rep_bar_height))
+
+        # Texto debajo de la barra
+        texto_rep = f"{int(self.repartidor.reputacion)}/100"
+        text_surface = self.font.render(texto_rep, True, WHITE)
+        text_rect = text_surface.get_rect(center=(bar_x + rep_bar_width // 2, bar_y + rep_bar_height + 12))
+        self.pantalla.blit(text_surface, text_rect)
+
+        # --- Texto inventario ---
         screen_w, screen_h = self.pantalla.get_size()
         texto_inv = "Presiona Ctrl para ver el inventario"
         text_surf = self.font.render(texto_inv, True, WHITE)
         text_rect = text_surf.get_rect(center=(screen_w / 2, screen_h - 20))
         self.pantalla.blit(text_surf, text_rect)
+
 
     def dibujar_inventario_overlay(self):
         overlay_w, overlay_h = 600, 400
@@ -246,17 +268,41 @@ class JuegoView:
             if pedido.status == "pendiente" and self.estan_adyacentes(pos_repartidor, pedido.pickup):
                 if self.repartidor.inventario.agregar_pedido(pedido):
                     pedido.status = "en curso"
-                    pedido.cargar_sprite((PEDIDO_SIZE,PEDIDO_SIZE))
+                    pedido.cargar_sprite((PEDIDO_SIZE, PEDIDO_SIZE))
                     print(f"Pedido {pedido.id} recogido")
                     return
 
             elif pedido.status == "en curso" and self.estan_adyacentes(pos_repartidor, pedido.dropoff):
                 if self.repartidor.inventario.entregar_pedido(pedido):
                     pedido.status = "entregado"
-                    self.repartidor.puntaje += pedido.payout  # Sumar puntaje al entregar
-                    # Idealmente, el pedido debería moverse a una lista de "entregados"
-                    # en lugar de solo cambiar el estado si queremos un puntaje final preciso.
-                    # Por ahora, lo dejamos en la lista de disponibles.
+                    self.repartidor.puntaje += pedido.payout
+                    tiempo_restante = pedido.deadline - self.tiempo_juego
+                    delta_rep = 0
+                    if tiempo_restante >= 0.2 * (pedido.deadline - pedido.release_time):
+                        delta_rep = 5
+                    elif tiempo_restante >= 0:
+                        delta_rep = 3
+                    else:
+                        atraso = -tiempo_restante
+                        if atraso <= 30:
+                            delta_rep = -2
+                        elif atraso <= 120:
+                            delta_rep = -5
+                        else:
+                            delta_rep = -10
+                    baja_critica = self.repartidor.aplicar_reputacion(delta_rep)
+                    if delta_rep >= 0:
+                        self.repartidor.racha_sin_penalizacion += 1
+                        if self.repartidor.racha_sin_penalizacion == 3:
+                            self.repartidor.aplicar_reputacion(2)
+                            self.repartidor.racha_sin_penalizacion = 0
+                    else:
+                        self.repartidor.racha_sin_penalizacion = 0
+                    if baja_critica:
+                        print("Se acabó la reputación. Derrota inmediata.")
+                        pygame.mixer.music.stop()
+                        self.onJugar("derrota", puntaje=self.repartidor.puntaje)
+                        return
                     print(f"Pedido {pedido.id} entregado")
                     return
 
