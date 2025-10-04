@@ -8,7 +8,7 @@ class Pedido:
     priority: int
     payout: float
     weight: float
-    deadline: str
+    deadline: int
     release_time: int
     pickup: Tuple[int, int]
     dropoff: Tuple[int, int]
@@ -26,7 +26,7 @@ class Pedido:
         """Calcula el tiempo restante hasta el deadline"""
         return max(0, self.deadline - tiempo_actual)
     
-    def cargar_sprite(self):
+    def cargar_sprite(self, size: Tuple[int, int]):
         if self.status == "pendiente":
             ruta = self.sprite_pickup
         elif self.status == "en curso":
@@ -36,4 +36,4 @@ class Pedido:
             return
         
         self.imagen = pygame.image.load(ruta).convert_alpha()
-        self.imagen = pygame.transform.scale(self.imagen, (25, 25))
+        self.imagen = pygame.transform.scale(self.imagen, size)
