@@ -15,7 +15,6 @@ MAP_URL = "https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/
 
 class MenuPrincipal:
     def __init__(self, pantalla, ancho: int = WIDTH_DEF, alto: int = HEIGHT_DEF, onJugar=None):
-        # Guardamos referencia a la pantalla de Pygame (el "canvas" donde se dibuja)
         self.pantalla = pantalla
         self.ancho = ancho
         self.alto = alto
@@ -30,18 +29,17 @@ class MenuPrincipal:
 
         # Inicializamos el sistema de fuentes de Pygame
         pygame.font.init()
-        # Fuente para el titulo (grande)
+
         self.tituloFont = pygame.freetype.SysFont(None, 64)
-        # Fuente para los botones (mas pequena)
+
         self.btnFont = pygame.freetype.SysFont(None, 28)
 
-        # Aqui se guardaran los botones como una lista de diccionarios
+
         self.botones = []
-        # Llamamos a la funcion que configura los botones
+
         self.configurarBotones()
 
     def configurarBotones(self):
-        """Crea y posiciona los botones en pantalla"""
         cx = self.ancho // 2   # Centro horizontal de la ventana
         btn_w = 160            # Ancho del boton
         btn_h = 48             # Alto del boton
@@ -59,16 +57,15 @@ class MenuPrincipal:
             self.salirClick,
         ]
 
-        # Calculamos la posicion vertical inicial para centrar el menu
+
         total_altura = len(textos) * btn_h + (len(textos) - 1) * sep
         start_y = self.alto // 2 - total_altura // 2 + btn_h // 2 + 30
 
-        # Creamos cada boton con su rectangulo y datos
         self.botones = []
         for i, texto in enumerate(textos):
             y = start_y + i * (btn_h + sep)
             r = pygame.Rect(0, 0, btn_w, btn_h)
-            r.center = (cx, y)  # Centramos el boton en (cx, y)
+            r.center = (cx, y)
 
             deshabilitado = (texto == "Cargar Partida" and not self.save_manager.existe_guardado(1))
 
@@ -81,27 +78,23 @@ class MenuPrincipal:
             })
 
     def manejarEvento(self, event):
-        """Recibe los eventos de Pygame (teclado, mouse)"""
-        # Si se hace click izquierdo con el mouse
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            pos = event.pos  # Posicion del click
+            pos = event.pos
             for b in self.botones:
                 if b["rect"].collidepoint(pos) and not b.get("deshabilitado"):
-                    b["callback"]()  # Ejecutar la funcion asignada
+                    b["callback"]()
 
-        # Si se presiona la tecla ESC, cerramos la ventana
+
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     def actualizar(self, *args, **kwargs):
-        """Actualiza el estado del menu (por ejemplo hover del mouse)"""
         mpos = pygame.mouse.get_pos()  # Posicion actual del mouse
         for b in self.botones:
             # Cambiamos hover segun si el mouse esta encima del boton
             b["hover"] = b["rect"].collidepoint(mpos)
 
     def dibujar(self):
-        """Dibuja en pantalla el fondo, titulo y botones"""
         # Pintamos el fondo de la ventana
         self.pantalla.fill(self.fondo)
         # Dibujamos el titulo del juego
@@ -130,7 +123,6 @@ class MenuPrincipal:
             self.pantalla.blit(text_surf, text_rect)
 
     def jugarClick(self):
-        """Accion al presionar Jugar"""
         pygame.mixer.music.stop()
         mapa = load_city_map(MAP_URL)
         print(f"Mapa cargado: {mapa.city_name} ({mapa.width}x{mapa.height})")
@@ -138,7 +130,6 @@ class MenuPrincipal:
             self.onJugar(mapa)
 
     def cargarClick(self):
-        """Acción al presionar Cargar Partida"""
         estado = self.save_manager.cargar_partida(1)
         if estado and callable(self.onJugar):
             pygame.mixer.music.stop()

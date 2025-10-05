@@ -19,11 +19,9 @@ class Pedido:
 
     # Métodos auxiliares
     def es_prioritario(self) -> bool:
-        """Retorna True si el pedido tiene prioridad mayor que 0"""
         return self.priority > 0
 
     def tiempo_restante(self, tiempo_actual: int) -> int:
-        """Calcula el tiempo restante hasta el deadline"""
         return max(0, self.deadline - tiempo_actual)
     
     def cargar_sprite(self, size: Tuple[int, int]):
