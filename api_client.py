@@ -1,19 +1,74 @@
 import requests
+import json
+import os
 from src.mapa import TileType, Tile, CityMap
 from src.clima import Clima
 from src.pedidos import Pedido
-from datetime import datetime, timezone
+from datetime import datetime
+from pathlib import Path
+
 
 
 # Factor para acelerar la aparición de paquetes.
 # Un valor más alto hace que aparezcan más rápido.
 # Por ejemplo, 3.0 significa que aparecerán 3 veces más rápido.
 FACTOR_ACELERACION = 3.0
+CACHE_DIR = Path("api_cache")
+DATA_DIR = Path("data")
+
+
+def _get_data_with_cache(url: str, name: str):
+    """
+    Obtiene datos del API, con fallback a cache y luego a archivo local.
+    - url: La URL del API.
+    - name: El nombre base para los archivos de cache y locales (ej: "ciudad", "pedidos").
+    """
+    CACHE_DIR.mkdir(exist_ok=True)
+
+    # 1. Intentar obtener datos del API
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        # Guardar en cache si la respuesta es exitosa
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        cache_file = CACHE_DIR / f"{name}_{timestamp}.json"
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+        print(f"Datos de '{name}' obtenidos del API y cacheados.")
+        return data["data"]
+
+    except (requests.RequestException, json.JSONDecodeError) as e:
+        print(f"Fallo al obtener datos de '{name}' desde el API: {e}")
+
+        # 2. Intentar usar el último archivo de cache
+        try:
+            cache_files = sorted(CACHE_DIR.glob(f"{name}_*.json"), reverse=True)
+            if cache_files:
+                latest_cache = cache_files[0]
+                with open(latest_cache, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                print(f"Usando datos cacheados para '{name}' de {latest_cache.name}.")
+                return data["data"]
+        except Exception as cache_error:
+            print(f"Fallo al leer cache para '{name}': {cache_error}")
+
+        # 3. Usar archivo local de /data como último recurso
+        try:
+            local_file = DATA_DIR / f"{name}.json"
+            with open(local_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            print(f"Usando archivo local de respaldo para '{name}'.")
+            return data["data"]
+        except Exception as local_error:
+            print(f"Fallo al leer archivo local para '{name}': {local_error}")
+            raise ConnectionError(f"No se pudieron cargar los datos para '{name}' desde ninguna fuente.")
+
 
 def load_city_map(url: str) -> CityMap:
-    response = requests.get(url)
-    response.raise_for_status()
-    raw = response.json()["data"]
+    raw = _get_data_with_cache(url, "ciudad")
 
     legend = {key: TileType(**value) for key, value in raw["legend"].items()}
 
@@ -39,9 +94,7 @@ def load_city_map(url: str) -> CityMap:
     )
 
 def load_clima(url: str) -> Clima:
-    response = requests.get(url)
-    response.raise_for_status()
-    raw = response.json()["data"]
+    raw = _get_data_with_cache(url, "weather")
 
     return Clima(
         city=raw["city"],
@@ -53,11 +106,9 @@ def load_clima(url: str) -> Clima:
 
 
 def load_pedidos(url: str, map_start_time: str) -> list[Pedido]:
-    response = requests.get(url)
-    response.raise_for_status()
-    raw_data = response.json()["data"]
+    raw = _get_data_with_cache(url, "pedidos")
 
-    pedidos_iniciales = [Pedido(**item) for item in raw_data]
+    pedidos_iniciales = [Pedido(**item) for item in raw]
 
     if not pedidos_iniciales or not map_start_time:
         return []

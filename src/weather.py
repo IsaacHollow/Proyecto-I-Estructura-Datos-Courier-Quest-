@@ -1,39 +1,23 @@
-import requests
 import random
-import json
-import os
+from api_client import load_clima
 
 API_URL = "https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/weather?mode=seed"
 LOCAL_FILE = "assets/weather.json"
 
 class Weather:
     def __init__(self):
-        data = None
         try:
-            resp = requests.get(API_URL, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json().get("data", None)
-        except Exception:
-            pass
-
-        if data is None:
-            if os.path.exists(LOCAL_FILE):
-                with open(LOCAL_FILE, "r", encoding="utf-8") as f:
-                    contenido = json.load(f)
-                    data = contenido["data"]
-            else:
-                data = {
-                    "conditions": ["clear", "clouds", "rain", "storm", "fog"],
-                    "transition": {"clear": {"clear": 1.0}},
-                    "initial": {"condition": "clear", "intensity": 0.0},
-                }
-
-        self.condiciones_disponibles = data["conditions"]
-        self.transiciones = data["transition"]
-        initial = data["initial"]
-
-        self.estado_actual = initial["condition"]
-        self.intensidad = initial["intensity"]
+            data = load_clima(API_URL)
+            self.condiciones_disponibles = data.conditions
+            self.transiciones = data.transition
+            self.estado_actual = data.condition
+            self.intensidad = data.intensity
+        except Exception as e:
+            print(f"Error definitivo al cargar clima, usando valores por defecto: {e}")
+            self.condiciones_disponibles = ["clear", "clouds", "rain"]
+            self.transiciones = {"clear": {"clear": 1.0}}
+            self.estado_actual = "clear"
+            self.intensidad = 0.0
 
         self.estado_objetivo = self.estado_actual
         self.intensidad_objetivo = self.intensidad
