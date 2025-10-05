@@ -53,7 +53,7 @@ class PantallaVictoria:
                 if b["rect"].collidepoint(event.pos):
                     b["accion"]()
 
-    def actualizar(self):
+    def actualizar(self,  dt=0):
         self.colocar_botones()
 
         # Hover de los botones
