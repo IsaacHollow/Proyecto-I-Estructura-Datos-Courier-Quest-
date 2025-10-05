@@ -53,7 +53,7 @@ class PantallaDerrota:
                 if b["rect"].collidepoint(event.pos):
                     b["accion"]()
 
-    def actualizar(self):
+    def actualizar(self, dt=0):
         self.colocar_botones()
         mpos = pygame.mouse.get_pos()
         for b in self.botones:

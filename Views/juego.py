@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from src.camera import Camera
 from src.repartidor import Repartidor
-from src.weather import weather
+from src.weather import Weather
 
 TILE_WIDTH = 35
 TILE_HEIGHT = 35
@@ -45,7 +45,7 @@ class JuegoView:
         start_tile_y = self.city_map.height // 2
         self.repartidor = Repartidor(start_tile_x, start_tile_y, TILE_WIDTH)
 
-        self.weather = weather()
+        self.weather = Weather()
 
         self.sprites = {
             "calle": pygame.image.load("assets/street.png").convert_alpha(),
@@ -154,7 +154,7 @@ class JuegoView:
         pygame.draw.rect(self.pantalla, GREEN, (offset_x, offset_y, barra_ancho * resistencia_ratio, barra_alto))
 
         # Clima
-        estado_clima, _ = self.weather.estado_y_intensidad()
+        estado_clima, _ = self.weather.obtener_estado_y_intensidad()
         texto_clima = f"Clima: {estado_clima}"
         self.pantalla.blit(self.font.render(texto_clima, True, WHITE), (offset_x, offset_y + 15))
 
@@ -197,6 +197,41 @@ class JuegoView:
         text_surf = self.font.render(texto_inv, True, WHITE)
         text_rect = text_surf.get_rect(center=(screen_w / 2, screen_h - 20))
         self.pantalla.blit(text_surf, text_rect)
+
+        # Ejemplo de overlay para el clima en dibujar()
+        color_overlay = None
+
+        if self.weather.estado_actual == "clear":
+            color_overlay = (255, 240, 180, int(60 * self.weather.intensidad))
+
+        elif self.weather.estado_actual == "sunny":
+            color_overlay = (255, 200, 120, int(70 * self.weather.intensidad))
+
+        elif self.weather.estado_actual == "clouds":
+            color_overlay = (220, 220, 220, int(50 * self.weather.intensidad))
+
+        elif self.weather.estado_actual == "rain_light":
+            color_overlay = (150, 180, 255, int(50 * self.weather.intensidad))
+
+        elif self.weather.estado_actual == "rain":
+            color_overlay = (100, 120, 200, int(70 * self.weather.intensidad))
+
+        elif self.weather.estado_actual == "storm":
+            color_overlay = (40, 50, 90, int(100 * self.weather.intensidad))
+
+        elif self.weather.estado_actual == "fog":
+            color_overlay = (200, 200, 200, int(60 * self.weather.intensidad))
+
+        if color_overlay:
+            overlay = pygame.Surface((self.pantalla.get_width(), self.pantalla.get_height()), pygame.SRCALPHA)
+            overlay.fill(color_overlay)
+            self.pantalla.blit(overlay, (0, 0))
+
+        if color_overlay:
+            overlay = pygame.Surface((self.pantalla.get_width(), self.pantalla.get_height()), pygame.SRCALPHA)
+            overlay.fill(color_overlay)
+            self.pantalla.blit(overlay, (0, 0))
+
 
     def dibujar_inventario_overlay(self):
         overlay_w, overlay_h = 600, 400
@@ -328,15 +363,17 @@ class JuegoView:
                     print(f"Pedido {pedido.id} entregado")
                     return
 
-    def actualizar(self):
-        dt = 1 / 60.0
+    def actualizar(self, dt):
+        # Contador de tiempo de juego
         self.tiempo_juego += dt
 
+        # Actualiza botones inventario si está abierto
         if self.mostrando_inventario:
             mpos = pygame.mouse.get_pos()
             for boton in self.botones_inventario:
                 boton["hover"] = boton["rect"].collidepoint(mpos)
 
+        # Movimiento del repartidor
         if not self.repartidor.is_moving and not self.mostrando_inventario:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -348,11 +385,17 @@ class JuegoView:
             elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
                 self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
+        # Actualiza clima
         self.weather.actualizar(dt)
+
+        # Determinar si el repartidor está en parque
         tile_actual = self.city_map.tiles[self.repartidor.tile_y][self.repartidor.tile_x]
         en_parque = tile_actual.type.name == "parque"
+
+        # Actualiza el repartidor
         self.repartidor.update(dt, self.weather, en_parque)
 
+        # Verifica si se terminó el juego
         self.comprobar_fin_juego()
 
     def comprobar_fin_juego(self):
