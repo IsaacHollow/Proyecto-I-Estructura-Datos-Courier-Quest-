@@ -1,6 +1,5 @@
 from typing import List, Optional
 from src.pedidos import Pedido
-from datetime import datetime, timezone
 
 
 class Inventario:

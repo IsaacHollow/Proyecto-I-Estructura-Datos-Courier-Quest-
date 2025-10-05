@@ -1,11 +1,12 @@
 import pygame
-from Views.pantalla_victoria import PantallaVictoria
+
 from Views.pantalla_derrota import PantallaDerrota
 from Views.menu_principal import MenuPrincipal
 from Views.juego import JuegoView
 from Views.pantalla_creditos import PantallaCreditos
 from Views.pantalla_reglas import PantallaReglas
 from Views.pantalla_puntaje import PantallaPuntaje
+from Views.pantalla_victoria import PantallaVictoria
 from api_client import load_city_map, load_pedidos
 
 WIDTH = 800
