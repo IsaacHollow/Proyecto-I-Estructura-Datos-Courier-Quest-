@@ -31,11 +31,9 @@ class JuegoView:
         # Tiempo de juego en segundos (contador ascendente)
         self.tiempo_juego = 0.0
 
-        # Meta de puntaje y tiempo límite (si city_map proporciona valores)
-        self.goal_income = getattr(self.city_map, "goal", 500)
-        self.time_limit = getattr(self.city_map, "max_time", 0)
-        if not self.time_limit or self.time_limit <= 0:
-            self.time_limit = 300.0  # 5 minutos por defecto
+        # Meta de puntaje y tiempo límite
+        self.goal_income = getattr(self.city_map, "goal")
+        self.time_limit = getattr(self.city_map, "max_time")
 
         # Flag para evitar múltiples transiciones de pantalla al finalizar
         self._fin_juego_iniciado = False
@@ -80,9 +78,6 @@ class JuegoView:
             {"texto": "Por Prioridad", "accion": "prioridad", "rect": pygame.Rect(0, 0, 120, 30), "hover": False},
             {"texto": "Por Deadline", "accion": "deadline", "rect": pygame.Rect(0, 0, 120, 30), "hover": False},
         ]
-
-        self.city_map.max_time = 105
-        self.city_map.meta_puntaje = 1000
 
     def manejarEvento(self, event):
         if self.mostrando_inventario:
@@ -182,13 +177,12 @@ class JuegoView:
         self.pantalla.blit(text_surface, text_rect)
 
         # --- Cronómetro y meta ---
-        tiempo_restante = max(0, self.city_map.max_time - self.tiempo_juego)
+        tiempo_restante = max(0, self.time_limit - self.tiempo_juego)
         minutos = int(tiempo_restante // 60)
         segundos = int(tiempo_restante % 60)
         texto_tiempo = f"Tiempo: {minutos:02d}:{segundos:02d}"
 
-        meta_puntaje = getattr(self.city_map, "meta_puntaje", 1000)
-        texto_meta = f"Meta: {meta_puntaje}"
+        texto_meta = f"Meta: {self.goal_income}"
 
         # Bajamos el texto para que no choque con reputación
         self.pantalla.blit(self.font.render(texto_tiempo, True, WHITE), (bar_x, bar_y + 35))
@@ -283,7 +277,7 @@ class JuegoView:
                     pygame.draw.rect(self.pantalla, (70, 80, 110, 180), fila_rect)
 
                 tiempo_restante = pedido.deadline - self.tiempo_juego
-                color_texto = GREEN if tiempo_restante > 900 else YELLOW if tiempo_restante > 300 else RED
+                color_texto = GREEN if tiempo_restante > 60 else YELLOW if tiempo_restante > 30 else RED
 
                 seconds = int(tiempo_restante)
                 sign = "-" if seconds < 0 else ""
@@ -327,8 +321,32 @@ class JuegoView:
             elif pedido.status == "en curso" and self.estan_adyacentes(pos_repartidor, pedido.dropoff):
                 if self.repartidor.inventario.entregar_pedido(pedido):
                     pedido.status = "entregado"
-                    self.repartidor.puntaje += pedido.payout
+
+                    pago_base = pedido.payout
+                    pago_final = pago_base
+
+                    # Bonificación por entrega rápida
                     tiempo_restante = pedido.deadline - self.tiempo_juego
+                    ventana_de_tiempo = pedido.deadline - pedido.release_time
+
+                    bonificacion_tiempo = 0
+                    if ventana_de_tiempo > 0 and tiempo_restante > 0:
+                        # Si entrega usando menos del 50% del tiempo disponible se da +20% bonus
+                        if (tiempo_restante / ventana_de_tiempo) >= 0.5:
+                            bonificacion_tiempo = pago_base * 0.20
+                        # Si entrega usando menos del 80% del tiempo disponible se da +10% bonus
+                        elif (tiempo_restante / ventana_de_tiempo) >= 0.2:
+                            bonificacion_tiempo = pago_base * 0.10
+
+                    pago_final += bonificacion_tiempo
+
+                    # Bonificación por reputación alta
+                    multiplicador_reputacion = self.repartidor.obtener_multiplicador_pago()  # +5% si rep >= 90
+                    pago_final *= multiplicador_reputacion
+
+                    # Asignar el puntaje final al repartidor
+                    self.repartidor.puntaje += int(pago_final)
+
                     delta_rep = 0
                     if tiempo_restante >= 0.2 * (pedido.deadline - pedido.release_time):
                         delta_rep = 5
@@ -402,62 +420,56 @@ class JuegoView:
         self.comprobar_fin_juego()
 
     def comprobar_fin_juego(self):
-        if self.city_map.max_time > 0 and self.tiempo_juego > self.city_map.max_time:
-            puntaje_final = self.calcular_puntaje_final()
-            pygame.mixer.music.stop()
-            self.score_manager.agregar_puntaje(puntaje_final, "derrota")
-            self.onJugar("derrota", puntaje=puntaje_final)
+        if self._fin_juego_iniciado:
             return
 
-        if self.repartidor.reputacion < 20:
-            puntaje_final = self.calcular_puntaje_final()
-            pygame.mixer.music.stop()
-            self.score_manager.agregar_puntaje(puntaje_final, "derrota")
-            self.onJugar("derrota", puntaje=puntaje_final)
-            return
+        partida_terminada = False
+        if self.time_limit > 0 and self.tiempo_juego > self.time_limit:
+            print("Fin del juego: Se acabó el tiempo.")
+            partida_terminada = True
+        elif self.repartidor.reputacion < 20:
+            print("Fin del juego: Reputación demasiado baja.")
+            partida_terminada = True
+        elif all(p.status == "entregado" for p in self.pedidos_disponibles):
+            print("Fin del juego: Todos los paquetes han sido entregados.")
+            partida_terminada = True
 
-        if self.repartidor.puntaje >= getattr(self.city_map, "meta_puntaje", 1000):
-            puntaje_final = self.calcular_puntaje_final()
+        if partida_terminada:
+            self._fin_juego_iniciado = True
             pygame.mixer.music.stop()
-            self.score_manager.agregar_puntaje(puntaje_final, "victoria")
-            self.onJugar("victoria", puntaje=puntaje_final)
-            return
 
-        if all(p.status == "entregado" for p in self.pedidos_disponibles):
             puntaje_final = self.calcular_puntaje_final()
-            pygame.mixer.music.stop()
-            self.score_manager.agregar_puntaje(puntaje_final, "victoria")
-            self.onJugar("victoria", puntaje=puntaje_final)
+
+            if puntaje_final >= self.goal_income:
+                print(f"¡Victoria! Puntaje final: {puntaje_final} (Meta: {self.goal_income})")
+                self.score_manager.agregar_puntaje(puntaje_final, "victoria")
+                self.onJugar("victoria", puntaje=puntaje_final)
+            else:
+                print(f"Derrota. Puntaje final: {puntaje_final} (Meta: {self.goal_income})")
+                self.score_manager.agregar_puntaje(puntaje_final, "derrota")
+                self.onJugar("derrota", puntaje=puntaje_final)
 
     def calcular_puntaje_final(self):
-        puntaje = 0
-        for pedido in self.pedidos_disponibles:
-            base = pedido.payout
+        #Puntaje base es el acumulado durante el juego.
+        score_base = self.repartidor.puntaje
 
-            # Penalización por retraso
-            tiempo_retraso = self.tiempo_juego - pedido.deadline
-            if tiempo_retraso > 0:
-                if tiempo_retraso <= 30:
-                    penal = 0.05 * base
-                elif tiempo_retraso <= 120:
-                    penal = 0.10 * base
-                else:
-                    penal = 0.20 * base
-                base -= penal
+        #Multiplicador por reputacion
+        pay_mult = self.repartidor.obtener_multiplicador_pago()
+        score_con_bonus_rep = score_base * pay_mult
 
-            # Bonus si se entrega antes del release_time + margen
-            tiempo_antes = pedido.deadline - self.tiempo_juego
-            if tiempo_antes > 0.2 * (pedido.deadline - pedido.release_time):
-                bonus = 0.05 * base
-                base += bonus
+        #Calcular bonificación por tiempo.
+        score_final = score_con_bonus_rep
+        if self.time_limit > 0 and self.tiempo_juego < (self.time_limit * 0.8):
+            bonus_tiempo = score_con_bonus_rep * 0.10  # 10% de bonus por terminar rápido
+            score_final += bonus_tiempo
 
-            puntaje += base
+        #Penalización por reputación baja
+        if self.repartidor.reputacion < 50:
+            # Se aplica un factor de reducción progresivo si la reputación es baja
+            reputacion_factor = max(0.5, self.repartidor.reputacion / 100)
+            score_final *= reputacion_factor
 
-        # Ajustar por reputación (menos de 50 reduce puntaje)
-        reputacion_factor = max(0.5, self.repartidor.reputacion / 100)
-        puntaje *= reputacion_factor
-
-        return int(puntaje)
+        return int(score_final)
 
     def calcular_puntaje(self):
         return self.repartidor.puntaje

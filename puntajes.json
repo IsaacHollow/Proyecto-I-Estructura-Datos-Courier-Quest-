@@ -1,6 +1,31 @@
 {
     "scores": [
         {
+            "puntaje": 1559,
+            "resultado": "victoria",
+            "fecha": "2025-10-04 22:55:26"
+        },
+        {
+            "puntaje": 1493,
+            "resultado": "victoria",
+            "fecha": "2025-10-04 22:46:38"
+        },
+        {
+            "puntaje": 1282,
+            "resultado": "victoria",
+            "fecha": "2025-10-04 22:40:37"
+        },
+        {
+            "puntaje": 1265,
+            "resultado": "derrota",
+            "fecha": "2025-10-04 22:58:51"
+        },
+        {
+            "puntaje": 938,
+            "resultado": "victoria",
+            "fecha": "2025-10-04 22:03:50"
+        },
+        {
             "puntaje": 930,
             "resultado": "victoria",
             "fecha": "2025-10-04 20:24:30"
@@ -9,6 +34,11 @@
             "puntaje": 930,
             "resultado": "victoria",
             "fecha": "2025-10-04 20:35:41"
+        },
+        {
+            "puntaje": 930,
+            "resultado": "victoria",
+            "fecha": "2025-10-04 22:01:14"
         },
         {
             "puntaje": 876,

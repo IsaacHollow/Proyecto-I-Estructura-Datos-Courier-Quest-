@@ -32,12 +32,18 @@ def reproducir_musica(ruta):
     pygame.mixer.music.load(ruta)
     pygame.mixer.music.play(-1)
 
+
 def irAJuego(parametro, **kwargs):
     global current_view
-    pedidos = load_pedidos(PEDIDOS_URL)
 
+    # Si el parámetro es un mapa, significa que venimos del menú principal para iniciar un juego.
     if not isinstance(parametro, str):
-        current_view = JuegoView(screen, parametro, pedidos, onJugar=irAJuego)
+        mapa = parametro
+        if mapa.start_time:
+            pedidos = load_pedidos(PEDIDOS_URL, mapa.start_time)
+        else:
+            pedidos = []  # No cargar pedidos si no hay start_time
+        current_view = JuegoView(screen, mapa, pedidos, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
         return
 
@@ -58,10 +64,11 @@ def irAJuego(parametro, **kwargs):
         reproducir_musica("assets/music/menu_theme.mp3")
     elif parametro == "jugar":
         mapa = load_city_map(MAP_URL)
+        if mapa.start_time:
+            pedidos = load_pedidos(PEDIDOS_URL, mapa.start_time)
+        else:
+            pedidos = []  # No cargar pedidos si no hay start_time
         current_view = JuegoView(screen, mapa, pedidos, onJugar=irAJuego)
-        reproducir_musica("assets/music/game_theme.mp3")
-    else:
-        current_view = JuegoView(screen, parametro, pedidos, onJugar=irAJuego)
         reproducir_musica("assets/music/game_theme.mp3")
 
 def volverAlMenu():

@@ -21,3 +21,4 @@ class CityMap:
     goal: int
     max_time: int
     tiles: list[list[Tile]]
+    start_time: Optional[str] = None
