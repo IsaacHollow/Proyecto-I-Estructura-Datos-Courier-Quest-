@@ -42,9 +42,16 @@ def irAJuego(parametro, **kwargs):
         if mapa.start_time:
             pedidos = load_pedidos(PEDIDOS_URL, mapa.start_time)
         else:
-            pedidos = []  # No cargar pedidos si no hay start_time
-        current_view = JuegoView(screen, mapa, pedidos, onJugar=irAJuego)
+            pedidos = []
+        current_view = JuegoView(screen, onJugar=irAJuego, city_map=mapa, pedidos_disponibles=pedidos)
         reproducir_musica("assets/music/game_theme.mp3")
+        return
+
+    if parametro == "cargar_juego":
+        estado = kwargs.get("estado_cargado")
+        if estado:
+            current_view = JuegoView(screen, onJugar=irAJuego, estado_cargado=estado)
+            reproducir_musica("assets/music/game_theme.mp3")
         return
 
     if parametro == "creditos":
@@ -68,7 +75,7 @@ def irAJuego(parametro, **kwargs):
             pedidos = load_pedidos(PEDIDOS_URL, mapa.start_time)
         else:
             pedidos = []  # No cargar pedidos si no hay start_time
-        current_view = JuegoView(screen, mapa, pedidos, onJugar=irAJuego)
+        current_view = JuegoView(screen, onJugar=irAJuego, city_map=mapa, pedidos_disponibles=pedidos)
         reproducir_musica("assets/music/game_theme.mp3")
 
 def volverAlMenu():

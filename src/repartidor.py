@@ -21,6 +21,30 @@ class Repartidor:
         self.v0_celdas_por_seg = 3.0
         self.move_speed_px_por_seg = 0
 
+        self.direccion = "derecha"
+        self.sprites = {}  # Se inicializa vacío
+        self.imagen = None  # Se inicializa vacío
+        self.inicializar_sprites()
+
+        self.direccion = "derecha"
+        self.imagen = self.sprites[self.direccion]
+
+        offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
+        offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
+        self.rect = pygame.Rect(0, 0, REPARTIDOR_ANCHO, REPARTIDOR_ALTO)
+        self.rect.topleft = (self.px + offset_x, self.py + offset_y)
+
+        # Atributos de juego
+        self.resistencia = 100.0
+        self.reputacion = 70.0
+        self.exhausto = False
+        self.puntaje = 0
+        self.movimiento_iniciado = False
+        self.inventario = Inventario(peso_max=15.0)
+        self.racha_sin_penalizacion = 0
+
+    def inicializar_sprites(self):
+        """Carga y escala los sprites del repartidor."""
         sprites_orig = {
             "arriba": pygame.image.load("assets/bicycle_up.png").convert_alpha(),
             "abajo": pygame.image.load("assets/bicycle_down.png").convert_alpha(),
@@ -31,21 +55,11 @@ class Repartidor:
         self.sprites = {key: pygame.transform.scale(sprite, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
                         for key, sprite in sprites_orig.items()}
 
-        self.direccion = "derecha"
         self.imagen = self.sprites[self.direccion]
 
         offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
         offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
         self.rect = self.imagen.get_rect(topleft=(self.px + offset_x, self.py + offset_y))
-
-        # Atributos de juego
-        self.resistencia = 100.0
-        self.reputacion = 70.0
-        self.exhausto = False
-        self.puntaje = 0
-        self.movimiento_iniciado = False
-        self.inventario = Inventario(peso_max=15.0)
-        self.racha_sin_penalizacion = 0
 
     def aplicar_reputacion(self, delta):
         """Aplica delta a la reputación, la clampa entre 0 y 100. Devuelve True si baja de 20."""
@@ -142,3 +156,18 @@ class Repartidor:
             self.exhausto = True
 
         self.resistencia = min(100.0, max(0.0, self.resistencia))
+
+    def __getstate__(self):
+        """Prepara el estado para ser guardado (excluye superficies de Pygame)."""
+        state = self.__dict__.copy()
+        # Eliminamos los atributos que no se pueden guardar
+        del state['sprites']
+        del state['imagen']
+        del state['rect']
+        return state
+
+    def __setstate__(self, state):
+        """Restaura el estado después de cargar (y reinicializa lo excluido)."""
+        self.__dict__.update(state)
+        # Volvemos a cargar las imágenes y crear el rect
+        self.inicializar_sprites()

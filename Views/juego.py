@@ -5,6 +5,8 @@ from src.camera import Camera
 from src.repartidor import Repartidor
 from src.weather import Weather
 from src.puntajes import ScoreManager
+from src.estado_juego import EstadoJuego
+from src.save_manager import SaveManager
 
 TILE_WIDTH = 35
 TILE_HEIGHT = 35
@@ -20,16 +22,37 @@ PEDIDO_SIZE = 20
 
 
 class JuegoView:
-    def __init__(self, pantalla, city_map, pedidos_disponibles, onJugar):
+    def __init__(self, pantalla, onJugar, city_map=None, pedidos_disponibles=None, estado_cargado=None):
         self.pantalla = pantalla
-        self.city_map = city_map
         self.pedidos_disponibles = pedidos_disponibles
         self.onJugar = onJugar
+        self.save_manager = SaveManager()
+
+        if estado_cargado:
+            # --- Cargar desde un estado ---
+            self.city_map = estado_cargado.city_map
+            self.pedidos_disponibles = estado_cargado.pedidos_actuales
+            self.tiempo_juego = estado_cargado.tiempo_juego
+            self.repartidor = estado_cargado.repartidor
+            self.weather = estado_cargado.weather
+            # Guardamos la lista original para poder crear un nuevo estado de guardado
+            self._pedidos_iniciales_sesion = estado_cargado.pedidos_iniciales
+        else:
+            # --- Iniciar una nueva partida ---
+            if city_map is None or pedidos_disponibles is None:
+                raise ValueError("Se requiere 'city_map' y 'pedidos_disponibles' para una nueva partida.")
+
+            self.city_map = city_map
+            self.pedidos_disponibles = pedidos_disponibles
+            # Guardamos una copia de la lista original de pedidos para la sesión
+            self._pedidos_iniciales_sesion = list(pedidos_disponibles)
+            self.tiempo_juego = 0.0
+            start_tile_x = self.city_map.width // 2
+            start_tile_y = self.city_map.height // 2
+            self.repartidor = Repartidor(start_tile_x, start_tile_y, TILE_WIDTH)
+            self.weather = Weather()
 
         self.score_manager = ScoreManager()
-
-        # Tiempo de juego en segundos (contador ascendente)
-        self.tiempo_juego = 0.0
 
         # Meta de puntaje y tiempo límite
         self.goal_income = getattr(self.city_map, "goal")
@@ -42,12 +65,6 @@ class JuegoView:
         self.mostrando_inventario = False
         self.vista_inventario = "normal"
 
-        start_tile_x = self.city_map.width // 2
-        start_tile_y = self.city_map.height // 2
-        self.repartidor = Repartidor(start_tile_x, start_tile_y, TILE_WIDTH)
-
-        self.weather = Weather()
-
         self.sprites = {
             "calle": pygame.image.load("assets/street.png").convert_alpha(),
             "parque": pygame.image.load("assets/park.png").convert_alpha(),
@@ -55,8 +72,8 @@ class JuegoView:
         }
 
         self.camera = Camera(self.pantalla,
-                             city_map.width * TILE_WIDTH,
-                             city_map.height * TILE_HEIGHT)
+                             self.city_map.width * TILE_WIDTH,
+                             self.city_map.height * TILE_HEIGHT)
 
         for key, sprite in list(self.sprites.items()):
             self.sprites[key] = pygame.transform.scale(sprite, (TILE_WIDTH, TILE_HEIGHT))
@@ -96,6 +113,12 @@ class JuegoView:
                         self.vista_inventario = boton["accion"]
                         break
             return
+
+        if event.type == pygame.KEYDOWN:
+            # con F5 guardamos en el slot 1
+            if event.key == pygame.K_F5:
+                self.guardar_estado_actual(1)
+                print("¡Partida guardada!")
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_z:
@@ -188,12 +211,19 @@ class JuegoView:
         self.pantalla.blit(self.font.render(texto_tiempo, True, WHITE), (bar_x, bar_y + 35))
         self.pantalla.blit(self.font.render(texto_meta, True, YELLOW), (bar_x, bar_y + 55))
 
+
         # --- Texto inventario ---
         screen_w, screen_h = self.pantalla.get_size()
         texto_inv = "Presiona Ctrl para ver el inventario"
         text_surf = self.font.render(texto_inv, True, WHITE)
-        text_rect = text_surf.get_rect(center=(screen_w / 2, screen_h - 20))
+        text_rect = text_surf.get_rect(center=(screen_w / 4.5, screen_h - 20))
         self.pantalla.blit(text_surf, text_rect)
+
+        texto_guardado = "Presiona F5 para guardar la partida"
+        text_surf = self.font.render(texto_guardado, True, WHITE)
+        text_rect = text_surf.get_rect(center=(screen_w / 1.3, screen_h - 20))
+        self.pantalla.blit(text_surf, text_rect)
+
 
         # Ejemplo de overlay para el clima en dibujar()
         color_overlay = None
@@ -473,3 +503,15 @@ class JuegoView:
 
     def calcular_puntaje(self):
         return self.repartidor.puntaje
+
+    def guardar_estado_actual(self, slot: int):
+        """Crea un objeto EstadoJuego y lo pasa al SaveManager."""
+        estado = EstadoJuego(
+            city_map=self.city_map,
+            pedidos_iniciales=self._pedidos_iniciales_sesion,
+            tiempo_juego=self.tiempo_juego,
+            repartidor=self.repartidor,
+            pedidos_actuales=self.pedidos_disponibles,
+            weather=self.weather
+        )
+        self.save_manager.guardar_partida(estado, slot)

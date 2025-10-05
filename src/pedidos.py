@@ -37,3 +37,18 @@ class Pedido:
         
         self.imagen = pygame.image.load(ruta).convert_alpha()
         self.imagen = pygame.transform.scale(self.imagen, size)
+
+    def __getstate__(self):
+        """Prepara el estado para ser guardado (excluye la superficie de Pygame)."""
+        state = self.__dict__.copy()
+        # Eliminamos el atributo 'imagen' que no se puede guardar
+        if 'imagen' in state:
+            del state['imagen']
+        return state
+
+    def __setstate__(self, state):
+        """Restaura el estado después de cargar."""
+        self.__dict__.update(state)
+        # La imagen se deja como None. Se cargará dinámicamente
+        # la próxima vez que se llame a `dibujar()` en JuegoView.
+        self.imagen = None

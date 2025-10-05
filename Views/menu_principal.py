@@ -5,6 +5,7 @@ from api_client import load_city_map
 from Views.pantalla_creditos import PantallaCreditos
 from Views.pantalla_reglas import PantallaReglas
 from Views.pantalla_puntaje import PantallaPuntaje
+from src.save_manager import SaveManager
 
 WIDTH_DEF = 800
 HEIGHT_DEF = 600
@@ -19,6 +20,7 @@ class MenuPrincipal:
         self.ancho = ancho
         self.alto = alto
         self.onJugar = onJugar  # Callback opcional cuando se presione "Jugar"
+        self.save_manager = SaveManager()
 
         # Colores en formato RGB (rojo, verde, azul)
         self.fondo = (18, 18, 30)        # Fondo oscuro
@@ -46,10 +48,11 @@ class MenuPrincipal:
         sep = 22               # Espacio entre botones
 
         # Textos de los botones
-        textos = ["Jugar", "Reglas", "Puntajes", "Creditos","Salir",]
+        textos = ["Jugar","Cargar Partida", "Reglas", "Puntajes", "Creditos","Salir",]
         # Funciones que se ejecutan al hacer click
         callbacks = [
             self.jugarClick,
+            self.cargarClick,
             self.reglasclick,
             self.puntajeclick,
             self.creditosClick,
@@ -58,7 +61,7 @@ class MenuPrincipal:
 
         # Calculamos la posicion vertical inicial para centrar el menu
         total_altura = len(textos) * btn_h + (len(textos) - 1) * sep
-        start_y = self.alto // 2 - total_altura // 2 + btn_h // 2
+        start_y = self.alto // 2 - total_altura // 2 + btn_h // 2 + 30
 
         # Creamos cada boton con su rectangulo y datos
         self.botones = []
@@ -66,11 +69,15 @@ class MenuPrincipal:
             y = start_y + i * (btn_h + sep)
             r = pygame.Rect(0, 0, btn_w, btn_h)
             r.center = (cx, y)  # Centramos el boton en (cx, y)
+
+            deshabilitado = (texto == "Cargar Partida" and not self.save_manager.existe_guardado(1))
+
             self.botones.append({
                 "rect": r,
                 "texto": texto,
                 "callback": callbacks[i],
-                "hover": False  # Si el mouse esta encima o no
+                "hover": False, # Si el mouse esta encima o no
+                "deshabilitado": deshabilitado
             })
 
     def manejarEvento(self, event):
@@ -79,7 +86,7 @@ class MenuPrincipal:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos  # Posicion del click
             for b in self.botones:
-                if b["rect"].collidepoint(pos):  # Si el click esta dentro del boton
+                if b["rect"].collidepoint(pos) and not b.get("deshabilitado"):
                     b["callback"]()  # Ejecutar la funcion asignada
 
         # Si se presiona la tecla ESC, cerramos la ventana
@@ -108,12 +115,17 @@ class MenuPrincipal:
 
         # Dibujamos los botones
         for b in self.botones:
-            # Escogemos color segun hover
-            color = self.btnHover if b["hover"] else self.btnNormal
+            #Cambia el color si el boton está deshabilitado
+            if b.get("deshabilitado"):
+                color = (40, 40, 50)  # Gris oscuro
+            else:
+                color = self.btnHover if b["hover"] else self.btnNormal
+
             pygame.draw.rect(self.pantalla, color, b["rect"], border_radius=8)
 
             # Dibujamos el texto centrado dentro del boton
-            text_surf, text_rect = self.btnFont.render(b["texto"], self.txtColor, size=28)
+            color_texto = (100, 100, 100) if b.get("deshabilitado") else self.txtColor
+            text_surf, text_rect = self.btnFont.render(b["texto"], color_texto, size=28)
             text_rect.center = b["rect"].center
             self.pantalla.blit(text_surf, text_rect)
 
@@ -124,6 +136,13 @@ class MenuPrincipal:
         print(f"Mapa cargado: {mapa.city_name} ({mapa.width}x{mapa.height})")
         if callable(self.onJugar):
             self.onJugar(mapa)
+
+    def cargarClick(self):
+        """Acción al presionar Cargar Partida"""
+        estado = self.save_manager.cargar_partida(1)
+        if estado and callable(self.onJugar):
+            pygame.mixer.music.stop()
+            self.onJugar("cargar_juego", estado_cargado=estado)
 
     def creditosClick(self):
             self.onJugar("creditos")

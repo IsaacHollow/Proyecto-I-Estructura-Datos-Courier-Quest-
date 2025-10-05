@@ -7,9 +7,6 @@
    # Prompts de IA 
 
 
-# Preguntas rapidas  
-https://chatgpt.com/share/68dc7eeb-8a10-800e-a5a5-425fe83ac942
-https://chatgpt.com/share/68e158dc-fb90-800e-82d8-030b4bea9f0b
 
 # Para instalar PyGame👇 
 
