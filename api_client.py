@@ -18,14 +18,10 @@ DATA_DIR = Path("data")
 
 
 def _get_data_with_cache(url: str, name: str):
-    """
-    Obtiene datos del API, con fallback a cache y luego a archivo local.
-    - url: La URL del API.
-    - name: El nombre base para los archivos de cache y locales (ej: "ciudad", "pedidos").
-    """
+
     CACHE_DIR.mkdir(exist_ok=True)
 
-    # 1. Intentar obtener datos del API
+    # Intentar obtener datos del API
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
@@ -43,7 +39,7 @@ def _get_data_with_cache(url: str, name: str):
     except (requests.RequestException, json.JSONDecodeError) as e:
         print(f"Fallo al obtener datos de '{name}' desde el API: {e}")
 
-        # 2. Intentar usar el último archivo de cache
+        # Intentar usar el último archivo de cache
         try:
             cache_files = sorted(CACHE_DIR.glob(f"{name}_*.json"), reverse=True)
             if cache_files:
@@ -55,7 +51,7 @@ def _get_data_with_cache(url: str, name: str):
         except Exception as cache_error:
             print(f"Fallo al leer cache para '{name}': {cache_error}")
 
-        # 3. Usar archivo local de /data como último recurso
+        # Usar archivo local de /data como último recurso
         try:
             local_file = DATA_DIR / f"{name}.json"
             with open(local_file, 'r', encoding='utf-8') as f:
@@ -88,7 +84,7 @@ def load_city_map(url: str) -> CityMap:
         height=raw["height"],
         goal=raw["goal"],
         #max_time=raw["max_time"],
-        max_time=max_time_acelerado,
+        max_time=max_time_acelerado, # Tiempo maximo acelerado
         tiles=tile_matrix,
         start_time=raw.get("start_time")
     )
@@ -129,7 +125,7 @@ def load_pedidos(url: str, map_start_time: str) -> list[Pedido]:
         #pedido.deadline = int(deadline_timestamp - start_timestamp)
 
         pedido.deadline = int((deadline_timestamp - start_timestamp) / FACTOR_ACELERACION)
-        pedido.release_time = int(pedido.release_time / FACTOR_ACELERACION)
+        pedido.release_time = int(pedido.release_time / FACTOR_ACELERACION) #Aqui se utiliza el factor de tiempo para acelerar el juego
 
         pedidos_finales.append(pedido)
 

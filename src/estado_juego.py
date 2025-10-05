@@ -7,9 +7,6 @@ from src.pedidos import Pedido
 
 @dataclass
 class EstadoJuego:
-    """
-    Contiene todos los datos necesarios para guardar y cargar una partida.
-    """
     # Datos de la sesión inicial
     city_map: CityMap
     pedidos_iniciales: List[Pedido]

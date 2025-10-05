@@ -33,11 +33,9 @@ class PantallaPuntaje:
         }
         self.boton_volver["rect"].center = (cx, cy)
 
-    # -------------------------------------------------
-    #   CARGAR Y FORMATEAR PUNTAJES
-    # -------------------------------------------------
+
     def actualizar_puntajes(self):
-        """Carga los puntajes desde el archivo JSON y los formatea para mostrar."""
+
         scores = self.score_manager.obtener_top(10)
         if not scores:
             self.lineas = ["Nada... aún"]
@@ -50,9 +48,7 @@ class PantallaPuntaje:
                 linea = f"{i:2d}.  {resultado.upper():<8}  |  Puntaje: {puntaje:4d}  |  {fecha}"
                 self.lineas.append(linea)
 
-    # -------------------------------------------------
-    #   EVENTOS
-    # -------------------------------------------------
+
     def manejarEvento(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             if callable(self.onVolver):
@@ -63,16 +59,12 @@ class PantallaPuntaje:
                 if callable(self.onVolver):
                     self.onVolver()
 
-    # -------------------------------------------------
-    #   ACTUALIZAR
-    # -------------------------------------------------
+
     def actualizar(self, dt=0):
         mpos = pygame.mouse.get_pos()
         self.boton_volver["hover"] = self.boton_volver["rect"].collidepoint(mpos)
 
-    # -------------------------------------------------
-    #   DIBUJAR
-    # -------------------------------------------------
+
     def dibujar(self):
         self.pantalla.fill(self.fondo)
 

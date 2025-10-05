@@ -22,7 +22,6 @@ class ScoreManager:
             json.dump({"scores": self.scores}, f, indent=4, ensure_ascii=False)
 
     def agregar_puntaje(self, puntaje: int, resultado: str):
-        """Guarda un nuevo puntaje con fecha y resultado (victoria/derrota)."""
         nuevo = {
             "puntaje": puntaje,
             "resultado": resultado,

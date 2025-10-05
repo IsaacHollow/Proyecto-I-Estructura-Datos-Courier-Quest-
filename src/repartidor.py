@@ -40,11 +40,10 @@ class Repartidor:
         self.exhausto = False
         self.puntaje = 0
         self.movimiento_iniciado = False
-        self.inventario = Inventario(peso_max=15.0)
+        self.inventario = Inventario(peso_max=7.0)
         self.racha_sin_penalizacion = 0
 
     def inicializar_sprites(self):
-        """Carga y escala los sprites del repartidor."""
         sprites_orig = {
             "arriba": pygame.image.load("assets/bicycle_up.png").convert_alpha(),
             "abajo": pygame.image.load("assets/bicycle_down.png").convert_alpha(),
@@ -62,17 +61,14 @@ class Repartidor:
         self.rect = self.imagen.get_rect(topleft=(self.px + offset_x, self.py + offset_y))
 
     def aplicar_reputacion(self, delta):
-        """Aplica delta a la reputación, la clampa entre 0 y 100. Devuelve True si baja de 20."""
         self.reputacion = max(0.0, min(100.0, self.reputacion + delta))
         return self.reputacion < 20.0
 
     def obtener_multiplicador_pago(self):
-        """Multiplicador por reputación alta (>=90 => +5%)."""
         return 1.05 if self.reputacion >= 90.0 else 1.0
 
     # ===== Movimiento =====
     def start_move(self, dx, dy, city_map, colliders, clima):
-        """Inicia el movimiento y calcula la velocidad según la fórmula."""
         if self.is_moving or self.exhausto:
             return
 
@@ -95,7 +91,7 @@ class Repartidor:
         m_resistencia = 0.8 if self.resistencia <= 30 else 1.0
         m_rep = 1.03 if self.reputacion >= 90 else 1.0
         m_peso = max(0.8, 1 - 0.03 * self.inventario.peso_total)
-        m_clima = clima.obtener_multiplicador()  # <-- clima afecta velocidad
+        m_clima = clima.obtener_multiplicador()
 
         current_tile = city_map.tiles[self.tile_y][self.tile_x]
         surface_weight = current_tile.type.surface_weight or 1.0
@@ -119,7 +115,6 @@ class Repartidor:
         self.imagen = self.sprites[self.direccion]
 
     def update(self, dt, clima, en_parque):
-        """Actualiza la posición (animación) y la resistencia."""
         if self.is_moving:
             if self.movimiento_iniciado:
                 consumo = 0.5 + (0.2 * (self.inventario.peso_total - 3.0) if self.inventario.peso_total > 3.0 else 0)
@@ -149,13 +144,13 @@ class Repartidor:
             recuperacion = 10.0 if en_parque else 5.0
             self.resistencia += recuperacion * dt
 
-        # Manejo exhausto <-> recuperado
         if self.exhausto and self.resistencia >= 30:
             self.exhausto = False
         elif not self.exhausto and self.resistencia <= 0:
             self.exhausto = True
 
         self.resistencia = min(100.0, max(0.0, self.resistencia))
+
 
     def __getstate__(self):
         """Prepara el estado para ser guardado (excluye superficies de Pygame)."""

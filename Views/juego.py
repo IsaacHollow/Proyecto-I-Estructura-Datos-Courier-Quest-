@@ -207,7 +207,6 @@ class JuegoView:
 
         texto_meta = f"Meta: {self.goal_income}"
 
-        # Bajamos el texto para que no choque con reputación
         self.pantalla.blit(self.font.render(texto_tiempo, True, WHITE), (bar_x, bar_y + 35))
         self.pantalla.blit(self.font.render(texto_meta, True, YELLOW), (bar_x, bar_y + 55))
 
@@ -224,8 +223,6 @@ class JuegoView:
         text_rect = text_surf.get_rect(center=(screen_w / 1.3, screen_h - 20))
         self.pantalla.blit(text_surf, text_rect)
 
-
-        # Ejemplo de overlay para el clima en dibujar()
         color_overlay = None
 
         if self.weather.estado_actual == "clear":
@@ -436,17 +433,13 @@ class JuegoView:
             elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
                 self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
-        # Actualiza clima
         self.weather.actualizar(dt)
 
-        # Determinar si el repartidor está en parque
         tile_actual = self.city_map.tiles[self.repartidor.tile_y][self.repartidor.tile_x]
         en_parque = tile_actual.type.name == "parque"
 
-        # Actualiza el repartidor
         self.repartidor.update(dt, self.weather, en_parque)
 
-        # Verifica si se terminó el juego
         self.comprobar_fin_juego()
 
     def comprobar_fin_juego(self):
@@ -505,7 +498,6 @@ class JuegoView:
         return self.repartidor.puntaje
 
     def guardar_estado_actual(self, slot: int):
-        """Crea un objeto EstadoJuego y lo pasa al SaveManager."""
         estado = EstadoJuego(
             city_map=self.city_map,
             pedidos_iniciales=self._pedidos_iniciales_sesion,

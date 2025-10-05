@@ -10,9 +10,6 @@ class SaveManager:
         self.save_dir.mkdir(exist_ok=True)
 
     def guardar_partida(self, estado: EstadoJuego, slot: int):
-        """
-        Guarda el estado del juego en un archivo binario.
-        """
         save_path = self.save_dir / f"slot{slot}.sav"
         try:
             with open(save_path, "wb") as f:
@@ -24,9 +21,6 @@ class SaveManager:
             return False
 
     def cargar_partida(self, slot: int) -> Optional[EstadoJuego]:
-        """
-        Carga el estado del juego desde un archivo binario.
-        """
         save_path = self.save_dir / f"slot{slot}.sav"
         if not save_path.exists():
             print(f"No se encontró ninguna partida guardada en el slot {slot}.")
@@ -42,5 +36,4 @@ class SaveManager:
             return None
 
     def existe_guardado(self, slot: int) -> bool:
-        """Verifica si existe un archivo de guardado para un slot."""
         return (self.save_dir / f"slot{slot}.sav").exists()
