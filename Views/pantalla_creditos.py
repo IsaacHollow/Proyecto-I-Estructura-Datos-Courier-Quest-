@@ -22,6 +22,7 @@ class PantallaCreditos:
             "Programadores:",
             "Isaac Sibaja Cortes",
             "Gabriel Quiros Villalobos",
+            "Hernan Sanchez Chaves",
             "",
             "Musica:",
             "Isaac Sibaja",

@@ -4,6 +4,7 @@ from datetime import timedelta
 from src.camera import Camera
 from src.repartidor import Repartidor
 from src.weather import Weather
+from src.puntajes import ScoreManager
 
 TILE_WIDTH = 35
 TILE_HEIGHT = 35
@@ -24,6 +25,8 @@ class JuegoView:
         self.city_map = city_map
         self.pedidos_disponibles = pedidos_disponibles
         self.onJugar = onJugar
+
+        self.score_manager = ScoreManager()
 
         # Tiempo de juego en segundos (contador ascendente)
         self.tiempo_juego = 0.0
@@ -402,24 +405,28 @@ class JuegoView:
         if self.city_map.max_time > 0 and self.tiempo_juego > self.city_map.max_time:
             puntaje_final = self.calcular_puntaje_final()
             pygame.mixer.music.stop()
+            self.score_manager.agregar_puntaje(puntaje_final, "derrota")
             self.onJugar("derrota", puntaje=puntaje_final)
             return
 
         if self.repartidor.reputacion < 20:
             puntaje_final = self.calcular_puntaje_final()
             pygame.mixer.music.stop()
+            self.score_manager.agregar_puntaje(puntaje_final, "derrota")
             self.onJugar("derrota", puntaje=puntaje_final)
             return
 
         if self.repartidor.puntaje >= getattr(self.city_map, "meta_puntaje", 1000):
             puntaje_final = self.calcular_puntaje_final()
             pygame.mixer.music.stop()
+            self.score_manager.agregar_puntaje(puntaje_final, "victoria")
             self.onJugar("victoria", puntaje=puntaje_final)
             return
 
         if all(p.status == "entregado" for p in self.pedidos_disponibles):
             puntaje_final = self.calcular_puntaje_final()
             pygame.mixer.music.stop()
+            self.score_manager.agregar_puntaje(puntaje_final, "victoria")
             self.onJugar("victoria", puntaje=puntaje_final)
 
     def calcular_puntaje_final(self):

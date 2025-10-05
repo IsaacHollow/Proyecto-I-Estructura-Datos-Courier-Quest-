@@ -1,0 +1,19 @@
+{
+    "scores": [
+        {
+            "puntaje": 930,
+            "resultado": "victoria",
+            "fecha": "2025-10-04 20:24:30"
+        },
+        {
+            "puntaje": 930,
+            "resultado": "victoria",
+            "fecha": "2025-10-04 20:35:41"
+        },
+        {
+            "puntaje": 876,
+            "resultado": "derrota",
+            "fecha": "2025-10-04 20:21:20"
+        }
+    ]
+}
