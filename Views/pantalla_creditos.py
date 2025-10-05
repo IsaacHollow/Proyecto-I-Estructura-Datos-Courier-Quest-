@@ -53,7 +53,7 @@ class PantallaCreditos:
                 if callable(self.onVolver):
                     self.onVolver()
 
-    def actualizar(self):
+    def actualizar(self, dt=0):
         mpos = pygame.mouse.get_pos()
         self.boton_volver["hover"] = self.boton_volver["rect"].collidepoint(mpos)
 

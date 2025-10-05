@@ -80,18 +80,31 @@ class Inventario:
                 self.cursor = self.pedidos.index(vista_actual[0])
 
     def _insertion_sort(self, lista: List[Pedido], key, reverse=False) -> List[Pedido]:
-        arr = list(lista)
+        """
+                Ordena una copia de la lista usando el algoritmo Insertion Sort.
+                - key: una función que extrae la clave de comparación de un elemento.
+                - reverse: si es True, ordena de mayor a menor.
+                """
+        arr = list(lista)  # Hacemos una copia para no modificar la lista original
         for i in range(1, len(arr)):
             elemento_actual = arr[i]
+            # Usamos la función key para obtener el valor a comparar
+            valor_actual = key(elemento_actual)
+
             j = i - 1
+
+            # Comparación para orden ascendente (reverse=False)
             if not reverse:
-                while j >= 0 and key(elemento_actual) < key(arr[j]):
-                    arr[j + 1] = arr[j]
+                while j >= 0 and key(arr[j]) > valor_actual:
+                    arr[j + 1] = arr[j]  # Desplazar elemento a la derecha
                     j -= 1
+            # Comparación para orden descendente (reverse=True)
             else:
-                while j >= 0 and key(elemento_actual) > key(arr[j]):
-                    arr[j + 1] = arr[j]
+                while j >= 0 and key(arr[j]) < valor_actual:
+                    arr[j + 1] = arr[j]  # Desplazar elemento a la derecha
                     j -= 1
+
+            # Insertar el elemento actual en su posición correcta
             arr[j + 1] = elemento_actual
         return arr
 

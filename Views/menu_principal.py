@@ -86,7 +86,7 @@ class MenuPrincipal:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 
-    def actualizar(self):
+    def actualizar(self, *args, **kwargs):
         """Actualiza el estado del menu (por ejemplo hover del mouse)"""
         mpos = pygame.mouse.get_pos()  # Posicion actual del mouse
         for b in self.botones:

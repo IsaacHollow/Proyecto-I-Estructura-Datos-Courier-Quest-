@@ -1,97 +1,94 @@
-# src/weather.py
+import requests
 import random
+import json
+import os
 
-class weather:
+API_URL = "https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/weather?mode=seed"
+LOCAL_FILE = "assets/weather.json"
 
-    ESTADOS = [
-        "despejado", "nublado", "llovizna", "lluvia",
-        "tormenta", "niebla", "viento", "calor", "frio"
-    ]
-
-    MATRIZ = {
-        "despejado": {"despejado": 0.6, "nublado": 0.25, "viento": 0.1, "llovizna": 0.05},
-        "nublado":   {"nublado": 0.6, "despejado": 0.25, "llovizna": 0.1, "niebla": 0.05},
-        "llovizna":  {"llovizna": 0.6, "lluvia": 0.3, "nublado": 0.1},
-        "lluvia":    {"lluvia": 0.6, "llovizna": 0.25, "tormenta": 0.1, "nublado": 0.05},
-        "tormenta":  {"tormenta": 0.7, "lluvia": 0.2, "viento": 0.1},
-        "niebla":    {"niebla": 0.7, "nublado": 0.3},
-        "viento":    {"viento": 0.7, "despejado": 0.2, "tormenta": 0.1},
-        "calor":     {"calor": 0.7, "despejado": 0.3},
-        "frio":      {"frio": 0.7, "despejado": 0.3},
-    }
-
-    MULT_VELOCIDAD = {
-        "despejado": 1.00, "nublado": 0.98, "llovizna": 0.90,
-        "lluvia": 0.85, "tormenta": 0.75, "niebla": 0.88,
-        "viento": 0.92, "calor": 0.90, "frio": 0.92
-    }
-
-    EXTRA_RES = {
-        "despejado": 0.0, "nublado": 0.0, "llovizna": 0.1,
-        "lluvia": 0.1, "tormenta": 0.3, "niebla": 0.0,
-        "viento": 0.1, "calor": 0.2, "frio": 0.0
-    }
-
+class Weather:
     def __init__(self):
-        self.estado_actual = "despejado"
-        self.intensidad = 0.0  # 0..1
-        self.tiempo_rafaga = random.uniform(45.0, 60.0)
+        data = None
+        try:
+            resp = requests.get(API_URL, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json().get("data", None)
+        except Exception:
+            pass
 
-        # transición
-        self.transicion = False
-        self.estado_viejo = self.estado_actual
-        self.estado_nuevo = None
-        self.t_trans = 0.0
-        self.duracion_trans = 0.0
-        self.intensidad_vieja = self.intensidad
+        if data is None:
+            if os.path.exists(LOCAL_FILE):
+                with open(LOCAL_FILE, "r", encoding="utf-8") as f:
+                    contenido = json.load(f)
+                    data = contenido["data"]
+            else:
+                data = {
+                    "conditions": ["clear", "clouds", "rain", "storm", "fog"],
+                    "transition": {"clear": {"clear": 1.0}},
+                    "initial": {"condition": "clear", "intensity": 0.0},
+                }
 
-        # multiplicador inicial
-        self.mult_actual = self.MULT_VELOCIDAD[self.estado_actual]
+        self.condiciones_disponibles = data["conditions"]
+        self.transiciones = data["transition"]
+        initial = data["initial"]
 
-    def _elegir_siguiente(self):
-        probs = self.MATRIZ.get(self.estado_actual, {self.estado_actual: 1.0})
-        estados = list(probs.keys())
-        pesos = list(probs.values())
-        return random.choices(estados, weights=pesos, k=1)[0]
+        self.estado_actual = initial["condition"]
+        self.intensidad = initial["intensity"]
 
-    def _multiplicador_estado(self, estado, intensidad):
-        base = self.MULT_VELOCIDAD.get(estado, 1.0)
-        return base - (1.0 - base) * intensidad
+        self.estado_objetivo = self.estado_actual
+        self.intensidad_objetivo = self.intensidad
+
+        self.tiempo_transicion = 0.0
+        self.duracion_transicion = 3.0
+        self.tiempo_burst = random.uniform(10.0, 20.0)
+
+        self.multiplicadores = {
+            "clear": 1.00, "clouds": 0.98, "rain_light": 0.90,
+            "rain": 0.85, "storm": 0.75, "fog": 0.88,
+            "wind": 0.92, "heat": 0.90, "cold": 0.92
+        }
 
     def actualizar(self, dt):
-        if self.transicion:
-            self.t_trans += dt
-            t = min(self.t_trans / self.duracion_trans, 1.0)
-            prev_mult = self._multiplicador_estado(self.estado_viejo, self.intensidad_vieja)
-            target_mult = self._multiplicador_estado(self.estado_nuevo, self.intensidad)
-            self.mult_actual = prev_mult + (target_mult - prev_mult) * t
-            if t >= 1.0:
-                self.transicion = False
-                self.estado_actual = self.estado_nuevo
-                self.estado_viejo = self.estado_actual
-                self.tiempo_rafaga = random.uniform(45.0, 60.0)
-                self.mult_actual = self._multiplicador_estado(self.estado_actual, self.intensidad)
+        self.tiempo_burst -= dt
+        if self.tiempo_burst <= 0:
+            self.elegir_nuevo_estado()
+            self.tiempo_burst = random.uniform(10.0, 20.0)
+        if self.tiempo_transicion > 0:
+            progreso = min(1.0, dt / self.tiempo_transicion)
+            self.intensidad += progreso * (self.intensidad_objetivo - self.intensidad)
+            self.tiempo_transicion -= dt
         else:
-            self.tiempo_rafaga -= dt
-            if self.tiempo_rafaga <= 0.0:
-                siguiente = self._elegir_siguiente()
-                self.estado_nuevo = siguiente
-                self.intensidad_vieja = self.intensidad
-                self.intensidad = random.uniform(0.0, 1.0)
-                self.transicion = True
-                self.t_trans = 0.0
-                self.duracion_trans = random.uniform(3.0, 5.0)
-                self.estado_viejo = self.estado_actual
+            self.intensidad = self.intensidad_objetivo
+            self.estado_actual = self.estado_objetivo
+
+    def elegir_nuevo_estado(self):
+        posibles = self.transiciones.get(self.estado_actual, {"clear": 1.0})
+        estados = list(posibles.keys())
+        probs = list(posibles.values())
+        nuevo_estado = random.choices(estados, weights=probs)[0]
+        self.estado_objetivo = nuevo_estado
+        self.intensidad_objetivo = random.uniform(0.4, 1.0)
+        self.tiempo_transicion = self.duracion_transicion
+
+    def obtener_estado_y_intensidad(self):
+        return self.estado_actual, self.intensidad
 
     def obtener_multiplicador(self):
-        return self.mult_actual
+        m_actual = self.multiplicadores.get(self.estado_actual, 1.0)
+        m_objetivo = self.multiplicadores.get(self.estado_objetivo, 1.0)
+        if self.tiempo_transicion > 0:
+            factor = 1 - (self.tiempo_transicion / self.duracion_transicion)
+            return m_actual + factor * (m_objetivo - m_actual)
+        return m_actual
 
     def obtener_extra_resistencia(self):
-        estado = self.estado_nuevo if (self.transicion and self.t_trans > 0) else self.estado_actual
-        base = self.EXTRA_RES.get(estado, 0.0)
-        return base * (1.0 + self.intensidad)
-
-    def estado_y_intensidad(self):
-        if self.transicion and self.estado_nuevo:
-            return f"{self.estado_viejo} → {self.estado_nuevo}", self.intensidad
-        return self.estado_actual, self.intensidad
+        clima = self.estado_actual
+        if clima == "rain_light":
+            return 0.05
+        elif clima == "rain":
+            return 0.1
+        elif clima == "storm":
+            return 0.2
+        elif clima in ["heat", "cold", "wind", "fog"]:
+            return 0.1
+        return 0.0

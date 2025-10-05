@@ -6,7 +6,6 @@ REPARTIDOR_ANCHO = 25
 REPARTIDOR_ALTO = 25
 
 class Repartidor:
-
     def __init__(self, start_tile_x, start_tile_y, tile_size):
         self.tile_x = start_tile_x
         self.tile_y = start_tile_y
@@ -29,9 +28,8 @@ class Repartidor:
             "derecha": pygame.image.load("assets/bicycle_right.png").convert_alpha()
         }
 
-        self.sprites = {}
-        for key, sprite in sprites_orig.items():
-            self.sprites[key] = pygame.transform.scale(sprite, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+        self.sprites = {key: pygame.transform.scale(sprite, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+                        for key, sprite in sprites_orig.items()}
 
         self.direccion = "derecha"
         self.imagen = self.sprites[self.direccion]
@@ -45,37 +43,20 @@ class Repartidor:
         self.reputacion = 70.0
         self.exhausto = False
         self.puntaje = 0
-
         self.movimiento_iniciado = False
-
         self.inventario = Inventario(peso_max=15.0)
-
-        # NUEVO: racha de entregas sin penalización (para bono)
         self.racha_sin_penalizacion = 0
 
-    # método para aplicar cambios de reputación
     def aplicar_reputacion(self, delta):
-        """
-        Aplica delta a la reputación, la clampa entre 0 y 100.
-        Devuelve True si la reputación queda por debajo de 20 (derrota).
-        """
-        self.reputacion += delta
-        # clamp
-        if self.reputacion > 100.0:
-            self.reputacion = 100.0
-        if self.reputacion < 0.0:
-            self.reputacion = 0.0
-
-        # si baja de 20 -> derrota inmediata
-        if self.reputacion < 20.0:
-            return True
-        return False
+        """Aplica delta a la reputación, la clampa entre 0 y 100. Devuelve True si baja de 20."""
+        self.reputacion = max(0.0, min(100.0, self.reputacion + delta))
+        return self.reputacion < 20.0
 
     def obtener_multiplicador_pago(self):
         """Multiplicador por reputación alta (>=90 => +5%)."""
         return 1.05 if self.reputacion >= 90.0 else 1.0
 
-    # === Métodos de movimiento y resistencia (tu lógica original) ===
+    # ===== Movimiento =====
     def start_move(self, dx, dy, city_map, colliders, clima):
         """Inicia el movimiento y calcula la velocidad según la fórmula."""
         if self.is_moving or self.exhausto:
@@ -96,11 +77,11 @@ class Repartidor:
         if next_rect_check.collidelist(colliders) != -1:
             return
 
-        # --- Fórmula de Velocidad ---
+        # ===== Fórmula de velocidad con clima =====
         m_resistencia = 0.8 if self.resistencia <= 30 else 1.0
         m_rep = 1.03 if self.reputacion >= 90 else 1.0
         m_peso = max(0.8, 1 - 0.03 * self.inventario.peso_total)
-        m_clima = clima.obtener_multiplicador()
+        m_clima = clima.obtener_multiplicador()  # <-- clima afecta velocidad
 
         current_tile = city_map.tiles[self.tile_y][self.tile_x]
         surface_weight = current_tile.type.surface_weight or 1.0
@@ -111,21 +92,16 @@ class Repartidor:
             return
 
         self.move_speed_px_por_seg = v_celdas_por_seg * self.tile_size
-        # --- Fin fórmula ---
-
         self.target_px = next_tile_x * self.tile_size
         self.target_py = next_tile_y * self.tile_size
         self.is_moving = True
         self.movimiento_iniciado = True
 
-        if dx > 0:
-            self.direccion = "derecha"
-        elif dx < 0:
-            self.direccion = "izquierda"
-        elif dy > 0:
-            self.direccion = "abajo"
-        elif dy < 0:
-            self.direccion = "arriba"
+        # Actualizar dirección
+        if dx > 0: self.direccion = "derecha"
+        elif dx < 0: self.direccion = "izquierda"
+        elif dy > 0: self.direccion = "abajo"
+        elif dy < 0: self.direccion = "arriba"
         self.imagen = self.sprites[self.direccion]
 
     def update(self, dt, clima, en_parque):
@@ -133,8 +109,7 @@ class Repartidor:
         if self.is_moving:
             if self.movimiento_iniciado:
                 consumo = 0.5 + (0.2 * (self.inventario.peso_total - 3.0) if self.inventario.peso_total > 3.0 else 0)
-                consumo += clima.obtener_extra_resistencia()
-                # consumo aplicado por movimiento a la CELDA (según tu implementación)
+                consumo += clima.obtener_extra_resistencia()  # <-- clima aumenta consumo
                 self.resistencia -= consumo
                 self.movimiento_iniciado = False
 
@@ -150,14 +125,12 @@ class Repartidor:
                 self.tile_x = int(self.px // self.tile_size)
                 self.tile_y = int(self.py // self.tile_size)
             else:
-                # movimiento interpolado (esto puede dar movimiento diagonal si dx & dy simultáneos; tu start_move evita diagonales)
                 self.px += (dx / distance) * move_dist
                 self.py += (dy / distance) * move_dist
 
             offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
             offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
             self.rect.topleft = (round(self.px) + offset_x, round(self.py) + offset_y)
-
         else:
             recuperacion = 10.0 if en_parque else 5.0
             self.resistencia += recuperacion * dt

@@ -73,6 +73,8 @@ volverAlMenu()
 running = True
 
 while running:
+    dt = clock.tick(60) / 1000  # tiempo en segundos desde el último frame
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -107,14 +109,13 @@ while running:
         screen.blit(pause_text3, rect3)
 
         pygame.display.flip()
-        clock.tick(60)
         continue
 
     if current_view is not None:
-        current_view.actualizar()
+        current_view.actualizar(dt)
         current_view.dibujar()
 
     pygame.display.flip()
-    clock.tick(60)
 
 pygame.quit()
+
