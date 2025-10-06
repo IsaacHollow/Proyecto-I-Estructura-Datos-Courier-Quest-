@@ -100,6 +100,65 @@ Para el guardado no hubo mayor problema, excepto por un problema de la librería
 
 Nos recomendó eliminar ese objeto del diccionario donde guardábamos los datos actuales, sobrescribiendo los métodos __setstate__ y __getstate__ de los pedidos y el repartidor, estos métodos fueron copiados directamente de los ejemplos dados por IA
 
+Para la logica de la reputacion:
+
+    "Necesito implementar un sistema de reputacion en mi juego de un repartidor, 
+    donde la reputacion empieza en 70 y cambia con base en el rendimiento y las entregas a tiempo,
+    tardias y canceladas. Si baja de 20 el jugador pierde, y si es excelente (≥90) obtiene 5% extra de pago.
+    Como puedo implementarlo? sin darme codigo, solo explicacion."
+
+Para la logica del clima:
+
+    "Quiero implementar un sistema de clima dinamico en mi juego hecho con pygame,
+    que cambie automaticamente entre diferentes estados como sol, lluvia, nubes, tormenta, etc.
+    La idea es que el cambio sea suave y tenga diferentes niveles de intensidad.
+    Como puedo hacer para que el clima cambie cada cierto tiempo sin afectar el rendimiento
+    ni que se vea brusco? no quiero codigo, solo que me lo expliques bien."
+
+Problemas en la logica del clima:
+
+A veces el clima no cambiaba aunque pasara el tiempo que yo queria, 
+entonces pregunte que podia estar pasando o si habia que reiniciar algun contador o variable despues del cambio.
+
+Tambien me paso que cuando cambiaba el clima se notaba un salto muy brusco, como si no hiciera la transicion,
+asi que pedi que me explicaran como suavizar ese cambio sin tener que rehacer todo el sistema.
+
+Para los efectos visuales del clima:
+
+    "Ya tengo el sistema de clima pero queria que se viera mas bonito,
+    por ejemplo que cuando este despejado se vea un tono amarillo o anaranjado,
+    cuando llueva se vea algo azul, o cuando haya tormenta se vea mas oscuro. 
+    Entonces pregunte cuales son los codigos de colores que se pueden usar en pygame para eso,
+    y como se pueden poner como una capa encima sin tapar todo el mapa."
+
+Tambien pregunte como hacer que esos efectos se vean mas suaves, por ejemplo que el color no tape de golpe
+sino que se mezcle un poco con la pantalla para que parezca mas realista, sin que se trabe el juego.
+
+Para la musica de todas las ventanas:
+
+     "Queria poner una musica diferente en cada pantalla, por ejemplo una en el menu principal, 
+     otra cuando el jugador gana o pierde y otra en el mapa, pero se me quedaban sonando dos al 
+     mismo tiempo o no se pausaban bien.
+     Pregunte como puedo manejar eso para que cada cancion se detenga justo al cambiar de pantalla,
+     pero sin que me den codigo, solo explicacion."
+
+Problemas a la hora de pausar la musica:
+
+A veces cuando pausaba el juego y luego lo reanudaba la musica seguia 
+desde otro punto o se escuchaba doble, entonces pedi que me explicaran como puedo pausar y reanudar 
+la musica sin que se buguee ni empiece de nuevo.
+
+Para la creacion de las ventanas de creditos, victoria, derrota, etc:
+
+Pregunte como podia hacer las ventanas de creditos, victoria, derrota y puntaje sin repetir tanto codigo, porque todas se parecian mucho y tenian los mismos botones."
+
+Tambien pedi que me explicaran como puedo hacer para que esas pantallas se carguen mas rapido 
+y no tenga que reiniciar todo el juego cada vez que paso de una a otra."
+
+Otra pregunta que hice fue como podia agregar animaciones o efectos sencillos 
+(por ejemplo que el texto aparezca de a poco o se mueva) pero sin que el rendimiento del juego baje mucho,
+solo con la logica.
+
 
 
 # Youtube

@@ -28,9 +28,10 @@ class PantallaCreditos:
             "Isaac Sibaja",
             "",
             "Diseño:",
+            "Gabriel Quiros Villalobos",
             "",
             "Agradecimientos especiales:",
-            "",
+            "José Pablo Calvo Suárez",
             ""
         ]
 
