@@ -22,6 +22,11 @@
 
 Para este prompt se utilizo bastante inspiración de los ejemplos dados por la IA, por lo que se le preguntó por explicación mas a fondo, el sistema recomendado fue de movimiento entre casillas, donde el personaje se desplaza de una casilla a otra y en medio de ellas no se pueden realizar acciones.
 
+-Ayuda para el sistemas de pedidos y entregas:
+        "el juego consiste en un repartidor que ira recogiendo y entregandos pedidos (cargados desde una api) en un mapa igualmente cargado por una api que me podrias recomendar la ese sistema?"
+
+-Se le preguntó a la IA si era recomendable utilizar una cola de prioridad para ordenar los pedidos por orden de prioridad, pero esta nos dijo que no era tan necesaria ya que todo es decision del juaghaor si decide entregar los pedidos con prioridad antes que los otros por lo que no optamos con esa opcion
+        "los pedidos tienen un nivel nivel de prioridad , que opines que se use una "cola de prioridad"?"        
 
 Se pidió recomendación para mostrar ubicación de entrega:
 
@@ -159,6 +164,11 @@ Otra pregunta que hice fue como podia agregar animaciones o efectos sencillos
 (por ejemplo que el texto aparezca de a poco o se mueva) pero sin que el rendimiento del juego baje mucho,
 solo con la logica.
 
+Para mostrar los puntajes en la pantalla de puntajes:
+
+        "necesito ayuda para guardar los puntajes en un archivo json y mostrarlos en la pantalla de puntajes"
+
+Tambien se le pidió ayuda para implentar el release time ya que los pedidos en un inicio se "Dibujaban" al mismo tiempo al inciar el juego por lo que reuqerimos de ayuda para que los pedidos aparecieran cada cierto tiempo. 
 
 
 # Youtube
