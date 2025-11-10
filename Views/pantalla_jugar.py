@@ -91,7 +91,7 @@ class PantallaModoJuego:
             for b in self.botones_principales:
                 self.dibujar_boton(b["rect"], b["texto"])
         else:
-            self.font_titulo.render_to(self.pantalla, (self.ancho//2 - 140, 80),
+            self.font_titulo.render_to(self.pantalla, (self.ancho//2 - 250, 80),
                                        "Selecciona dificultad", self.color_texto)
 
             for b in self.botones_dificultad:
