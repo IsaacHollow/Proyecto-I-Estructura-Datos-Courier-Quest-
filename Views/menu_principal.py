@@ -9,54 +9,46 @@ from src.save_manager import SaveManager
 
 WIDTH_DEF = 800
 HEIGHT_DEF = 600
-# URL de donde se carga el mapa si se presiona "Jugar"
 MAP_URL = "https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/city/map"
 
 
 class MenuPrincipal:
-    def __init__(self, pantalla, ancho: int = WIDTH_DEF, alto: int = HEIGHT_DEF, onJugar=None):
+    def __init__(self, pantalla, ancho=WIDTH_DEF, alto=HEIGHT_DEF, onJugarModo=None, onAccion=None):
         self.pantalla = pantalla
         self.ancho = ancho
         self.alto = alto
-        self.onJugar = onJugar  # Callback opcional cuando se presione "Jugar"
+        self.onJugarModo = onJugarModo
+        self.onAccion = onAccion
+
         self.save_manager = SaveManager()
 
-        # Colores en formato RGB (rojo, verde, azul)
-        self.fondo = (18, 18, 30)        # Fondo oscuro
-        self.btnNormal = (60, 120, 170)  # Color normal del boton
-        self.btnHover = (90, 150, 200)   # Color cuando el mouse pasa encima
-        self.txtColor = (255, 255, 255)  # Texto blanco
+        self.fondo = (18, 18, 30)
+        self.btnNormal = (60, 120, 170)
+        self.btnHover = (90, 150, 200)
+        self.txtColor = (255, 255, 255)
 
-        # Inicializamos el sistema de fuentes de Pygame
         pygame.font.init()
-
         self.tituloFont = pygame.freetype.SysFont(None, 64)
-
         self.btnFont = pygame.freetype.SysFont(None, 28)
 
-
         self.botones = []
-
         self.configurarBotones()
 
     def configurarBotones(self):
-        cx = self.ancho // 2   # Centro horizontal de la ventana
-        btn_w = 160            # Ancho del boton
-        btn_h = 48             # Alto del boton
-        sep = 22               # Espacio entre botones
+        cx = self.ancho // 2
+        btn_w = 160
+        btn_h = 48
+        sep = 22
 
-        # Textos de los botones
-        textos = ["Jugar","Cargar Partida", "Reglas", "Puntajes", "Creditos","Salir",]
-        # Funciones que se ejecutan al hacer click
+        textos = ["Jugar", "Cargar Partida", "Reglas", "Puntajes", "Creditos", "Salir"]
         callbacks = [
             self.jugarClick,
             self.cargarClick,
-            self.reglasclick,
+            self.reglasClick,
             self.puntajeclick,
             self.creditosClick,
-            self.salirClick,
+            self.salirClick
         ]
-
 
         total_altura = len(textos) * btn_h + (len(textos) - 1) * sep
         start_y = self.alto // 2 - total_altura // 2 + btn_h // 2 + 30
@@ -73,7 +65,7 @@ class MenuPrincipal:
                 "rect": r,
                 "texto": texto,
                 "callback": callbacks[i],
-                "hover": False, # Si el mouse esta encima o no
+                "hover": False,
                 "deshabilitado": deshabilitado
             })
 
@@ -84,65 +76,50 @@ class MenuPrincipal:
                 if b["rect"].collidepoint(pos) and not b.get("deshabilitado"):
                     b["callback"]()
 
-
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     def actualizar(self, *args, **kwargs):
-        mpos = pygame.mouse.get_pos()  # Posicion actual del mouse
+        mpos = pygame.mouse.get_pos()
         for b in self.botones:
-            # Cambiamos hover segun si el mouse esta encima del boton
             b["hover"] = b["rect"].collidepoint(mpos)
 
     def dibujar(self):
-        # Pintamos el fondo de la ventana
         self.pantalla.fill(self.fondo)
-        # Dibujamos el titulo del juego
-        self.tituloFont.render_to(
-            self.pantalla,
-            (self.ancho // 2 - 220, 60),
-            "Courier Quest",
-            self.txtColor,
-            size=64
-        )
+        self.tituloFont.render_to(self.pantalla, (self.ancho // 2 - 220, 60), "Courier Quest", self.txtColor, size=64)
 
-        # Dibujamos los botones
         for b in self.botones:
-            #Cambia el color si el boton está deshabilitado
-            if b.get("deshabilitado"):
-                color = (40, 40, 50)  # Gris oscuro
-            else:
-                color = self.btnHover if b["hover"] else self.btnNormal
-
+            color = (40, 40, 50) if b.get("deshabilitado") else (self.btnHover if b["hover"] else self.btnNormal)
             pygame.draw.rect(self.pantalla, color, b["rect"], border_radius=8)
+            tx_color = (100, 100, 100) if b.get("deshabilitado") else self.txtColor
+            surf, rect = self.btnFont.render(b["texto"], tx_color, size=28)
+            rect.center = b["rect"].center
+            self.pantalla.blit(surf, rect)
 
-            # Dibujamos el texto centrado dentro del boton
-            color_texto = (100, 100, 100) if b.get("deshabilitado") else self.txtColor
-            text_surf, text_rect = self.btnFont.render(b["texto"], color_texto, size=28)
-            text_rect.center = b["rect"].center
-            self.pantalla.blit(text_surf, text_rect)
 
     def jugarClick(self):
         pygame.mixer.music.stop()
-        mapa = load_city_map(MAP_URL)
-        print(f"Mapa cargado: {mapa.city_name} ({mapa.width}x{mapa.height})")
-        if callable(self.onJugar):
-            self.onJugar(mapa)
+        if callable(self.onJugarModo):
+
+            self.onJugarModo()
 
     def cargarClick(self):
         estado = self.save_manager.cargar_partida(1)
-        if estado and callable(self.onJugar):
+        if estado and callable(self.onAccion):
             pygame.mixer.music.stop()
-            self.onJugar("cargar_juego", estado_cargado=estado)
+            self.onAccion("cargar_juego", estado_cargado=estado)
 
     def creditosClick(self):
-            self.onJugar("creditos")
+        if callable(self.onAccion):
+            self.onAccion("creditos")
 
-    def reglasclick(self):
-            self.onJugar("reglas")
+    def reglasClick(self):
+        if callable(self.onAccion):
+            self.onAccion("reglas")
 
     def puntajeclick(self):
-        self.onJugar("puntajes")
+        if callable(self.onAccion):
+            self.onAccion("puntajes")
 
     def salirClick(self):
         pygame.quit()

@@ -11,14 +11,54 @@
             "fecha": "2025-10-05 19:23:08"
         },
         {
+            "puntaje": 1559,
+            "resultado": "victoria",
+            "fecha": "2025-10-06 14:17:46"
+        },
+        {
+            "puntaje": 1559,
+            "resultado": "victoria",
+            "fecha": "2025-10-10 12:34:19"
+        },
+        {
+            "puntaje": 1559,
+            "resultado": "victoria",
+            "fecha": "2025-10-10 12:44:03"
+        },
+        {
+            "puntaje": 1559,
+            "resultado": "victoria",
+            "fecha": "2025-10-22 19:53:34"
+        },
+        {
+            "puntaje": 1559,
+            "resultado": "victoria",
+            "fecha": "2025-10-25 13:32:00"
+        },
+        {
             "puntaje": 1541,
             "resultado": "victoria",
             "fecha": "2025-10-05 13:05:39"
         },
         {
+            "puntaje": 1538,
+            "resultado": "victoria",
+            "fecha": "2025-10-06 17:16:53"
+        },
+        {
             "puntaje": 1493,
             "resultado": "victoria",
             "fecha": "2025-10-04 22:46:38"
+        },
+        {
+            "puntaje": 1476,
+            "resultado": "derrota",
+            "fecha": "2025-10-06 13:59:05"
+        },
+        {
+            "puntaje": 1346,
+            "resultado": "derrota",
+            "fecha": "2025-10-06 17:14:17"
         },
         {
             "puntaje": 1282,
@@ -29,6 +69,11 @@
             "puntaje": 1265,
             "resultado": "derrota",
             "fecha": "2025-10-04 22:58:51"
+        },
+        {
+            "puntaje": 961,
+            "resultado": "derrota",
+            "fecha": "2025-10-10 12:40:41"
         },
         {
             "puntaje": 938,
