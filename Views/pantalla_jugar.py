@@ -28,14 +28,10 @@ class PantallaModoJuego:
         w, h = 260, 60
         y_center = self.alto // 2
 
-        btn_solo = pygame.Rect(0, 0, w, h)
-        btn_solo.center = (self.ancho // 2, y_center - 50)
-
         btn_ia = pygame.Rect(0, 0, w, h)
-        btn_ia.center = (self.ancho // 2, y_center + 50)
+        btn_ia.center = (self.ancho // 2, y_center - 50)
 
         return [
-            {"rect": btn_solo, "texto": "Jugar Solo", "accion": "solo"},
             {"rect": btn_ia,   "texto": "Jugar vs IA", "accion": "ia"}
         ]
 
@@ -68,10 +64,7 @@ class PantallaModoJuego:
             if not self.mostrar_dificultades:
                 for b in self.botones_principales:
                     if b["rect"].collidepoint(pos):
-                        if b["accion"] == "solo":
-                            if callable(self.onJugarSolo):
-                                self.onJugarSolo()
-                        elif b["accion"] == "ia":
+                        if b["accion"] == "ia":
                             self.mostrar_dificultades = True
 
             else:

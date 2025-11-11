@@ -8,6 +8,8 @@ from src.puntajes import ScoreManager
 from src.estado_juego import EstadoJuego
 from src.save_manager import SaveManager
 
+from src.repartidor_IA import RepartidorIA
+
 TILE_WIDTH = 35
 TILE_HEIGHT = 35
 WHITE = (255, 255, 255)
@@ -96,6 +98,11 @@ class JuegoView:
             {"texto": "Por Deadline", "accion": "deadline", "rect": pygame.Rect(0, 0, 120, 30), "hover": False},
         ]
 
+        start_tile_x = self.city_map.width // 2 + 1  # solo para que no esté encima
+        start_tile_y = self.city_map.height // 2
+        self.repartidor_ia = RepartidorIA(start_tile_x, start_tile_y, TILE_WIDTH)
+
+
     def manejarEvento(self, event):
         if self.mostrando_inventario:
             if event.type == pygame.KEYDOWN:
@@ -128,10 +135,12 @@ class JuegoView:
                 if self.mostrando_inventario:
                     self.vista_inventario = "normal"
 
+
     def dibujar(self, offset_x=10, offset_y=10):
         self.pantalla.fill((0, 0, 0))
         self.camera.center_on(self.repartidor.rect)
 
+        # Dibujar el mapa
         for y, row in enumerate(self.city_map.tiles):
             for x, tile in enumerate(row):
                 sprite = self.sprites.get(tile.type.name)
@@ -140,6 +149,7 @@ class JuegoView:
                     screen_x, screen_y = self.camera.apply((px, py))
                     self.pantalla.blit(sprite, (screen_x, screen_y))
 
+        # Dibujar pedidos
         for pedido in self.pedidos_disponibles:
             if self.tiempo_juego < pedido.release_time:
                 continue
@@ -159,15 +169,21 @@ class JuegoView:
                 screen_x, screen_y = self.camera.apply((px, py))
                 self.pantalla.blit(pedido.imagen, (screen_x, screen_y))
 
+        # Dibujar personajes
+        self.repartidor_ia.actualizar_animacion(1 / 60)
+        self.repartidor_ia.dibujar(self.pantalla, self.camera)
+
         screen_x, screen_y = self.camera.apply(self.repartidor.rect.topleft)
         self.pantalla.blit(self.repartidor.imagen, (screen_x, screen_y))
 
+        # Dibujar UI
         self.dibujar_ui(offset_x, offset_y)
 
         if self.mostrando_inventario:
             self.dibujar_inventario_overlay()
 
     def dibujar_ui(self, offset_x, offset_y):
+
         barra_ancho = 100
         barra_alto = 10
         resistencia_ratio = self.repartidor.resistencia / 100
@@ -412,6 +428,14 @@ class JuegoView:
                     return
 
     def actualizar(self, dt):
+
+        # Actualiza el jugador IA: decide movimiento, se mueve y anima
+        self.repartidor_ia.decidir_movimiento(self.pedidos_disponibles, self.city_map, self.weather)
+        self.repartidor_ia.mover(self.building_rects,
+                                 self.city_map.width * TILE_WIDTH,
+                                 self.city_map.height * TILE_HEIGHT)
+        self.repartidor_ia.actualizar_animacion(dt)
+
         # Contador de tiempo de juego
         self.tiempo_juego += dt
 
@@ -421,7 +445,7 @@ class JuegoView:
             for boton in self.botones_inventario:
                 boton["hover"] = boton["rect"].collidepoint(mpos)
 
-        # Movimiento del repartidor
+        # Movimiento del repartidor humano
         if not self.repartidor.is_moving and not self.mostrando_inventario:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -433,13 +457,17 @@ class JuegoView:
             elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
                 self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
+        # Actualiza clima
         self.weather.actualizar(dt)
 
+        # Detectar si el jugador está en parque
         tile_actual = self.city_map.tiles[self.repartidor.tile_y][self.repartidor.tile_x]
         en_parque = tile_actual.type.name == "parque"
 
+        # Actualiza lógica del jugador humano
         self.repartidor.update(dt, self.weather, en_parque)
 
+        # Comprueba si se ha terminado el juego
         self.comprobar_fin_juego()
 
     def comprobar_fin_juego(self):

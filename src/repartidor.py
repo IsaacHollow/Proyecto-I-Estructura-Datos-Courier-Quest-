@@ -2,8 +2,8 @@
 import pygame
 from src.inventario import Inventario
 
-REPARTIDOR_ANCHO = 25
-REPARTIDOR_ALTO = 25
+REPARTIDOR_ANCHO = 27
+REPARTIDOR_ALTO = 27
 
 class Repartidor:
     def __init__(self, start_tile_x, start_tile_y, tile_size):
@@ -42,6 +42,7 @@ class Repartidor:
         self.movimiento_iniciado = False
         self.inventario = Inventario(peso_max=7.0)
         self.racha_sin_penalizacion = 0
+
 
     def inicializar_sprites(self):
         sprites_orig = {
