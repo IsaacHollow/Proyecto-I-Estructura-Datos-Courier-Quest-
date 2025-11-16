@@ -404,7 +404,14 @@ class JuegoView:
                     self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
         # Lógica y actualización del repartidor IA
-        self.repartidor_ia.actualizar_logica_ia(dt, self.city_map, self.building_rects, self.weather)
+        self.repartidor_ia.actualizar_logica_ia(
+            dt,
+            self.city_map,
+            self.building_rects,
+            self.weather,
+            self.pedidos_disponibles,
+            self.tiempo_juego
+        )
         tile_ia = self.city_map.tiles[self.repartidor_ia.tile_y][self.repartidor_ia.tile_x]
         en_parque_ia = tile_ia.type.name == "parque"
         self.repartidor_ia.update(dt, self.weather, en_parque_ia)
