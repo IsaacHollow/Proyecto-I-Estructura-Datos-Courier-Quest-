@@ -54,7 +54,10 @@ class RepartidorIA(Repartidor):
         if self.estado == "BUSCANDO_PEDIDO":
             if self.decision_timer >= self.intervalo_decision:
                 self.decision_timer = 0
-                mejor_pedido = self._seleccionar_mejor_pedido(pedidos, city_map)
+
+                # Filtrar los pedidos que ya han sido liberados en el tiempo de juego actual
+                pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time]
+                mejor_pedido = self._seleccionar_mejor_pedido(pedidos_disponibles_ahora, city_map)
 
                 if mejor_pedido:
                     self.objetivo_actual = mejor_pedido
@@ -96,7 +99,9 @@ class RepartidorIA(Repartidor):
 
         # Moverse al siguiente paso
         self.start_move(dx, dy, city_map, colliders, weather)
-        self.ruta_actual.pop(0)
+        # Solo eliminar el paso de la ruta si el movimiento fue exitoso
+        if self.is_moving:
+            self.ruta_actual.pop(0)
 
     def _reset_estado(self):
         """Resetea el estado de la IA para que vuelva a buscar un pedido."""
@@ -104,8 +109,6 @@ class RepartidorIA(Repartidor):
         self.objetivo_actual = None
         self.ruta_actual = []
         self.decision_timer = 0  # Forzar una nueva decisión inmediatamente
-
-    ### Lógica de decisión (Paso 3) - Aún por implementar ###
 
     def _seleccionar_mejor_pedido(self, pedidos_disponibles: List[Pedido], city_map) -> Optional[Pedido]:
         """
@@ -130,18 +133,14 @@ class RepartidorIA(Repartidor):
 
         return mejor_pedido
 
-    ### Lógica de interacción (recoger/entregar) - Aún por implementar ###
-
     def _intentar_recoger(self, city_map):
         """Lógica para cuando la IA llega al punto de recogida."""
         # Esta es una versión simplificada. La lógica completa vendrá después.
         print(f"IA [DIFÍCIL]: Llegó a la ubicación de recogida de {self.objetivo_actual.id}.")
-        # (Aquí irá la lógica para añadir al inventario, cambiar estado del pedido, etc.)
         self._reset_estado()  # De momento, solo volvemos a buscar
 
     def _intentar_entregar(self):
         """Lógica para cuando la IA llega al punto de entrega."""
         # Esta es una versión simplificada.
         print(f"IA [DIFÍCIL]: Llegó a la ubicación de entrega de {self.objetivo_actual.id}.")
-        # (Aquí irá la lógica para obtener puntos, actualizar reputación, etc.)
         self._reset_estado()  # De momento, solo volvemos a buscar
