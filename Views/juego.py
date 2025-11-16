@@ -26,11 +26,16 @@ class JuegoView:
     def __init__(self, pantalla, onJugar, city_map=None, pedidos_disponibles=None, estado_cargado=None,
                  dificultad_cpu: str = "facil"):
         self.pantalla = pantalla
+        self.width, self.height = pantalla.get_size()
         self.pedidos_disponibles = pedidos_disponibles
         self.onJugar = onJugar
         self.save_manager = SaveManager()
         self.dificultad_cpu = dificultad_cpu
-        # self.establecer_objetivo_por_dificultad()
+        self.pre_juego = True
+        self.contador_inicio = 4
+        self.timer_contador = 0
+        self.tiempo_por_numero = 1.0
+        self.mostrar_numero = True  # para controlar cuando desaparecer
 
         if estado_cargado:
             self.city_map = estado_cargado.city_map
@@ -65,7 +70,7 @@ class JuegoView:
 
         self.score_manager = ScoreManager()
         self.goal_income = 1200
-        self.time_limit = getattr(self.city_map, "max_time")
+        self.time_limit = getattr(self.city_map, "max_time", 0)
         self._fin_juego_iniciado = False
 
         self.mostrando_inventario = False
@@ -169,10 +174,19 @@ class JuegoView:
                 sx, sy = self.camera.apply(repartidor_obj.rect.topleft)
                 self.pantalla.blit(repartidor_obj.imagen, (sx, sy))
 
+        # Dibujar UI normal
         self.dibujar_ui()
 
         if self.mostrando_inventario:
             self.dibujar_inventario_overlay()
+
+        # Dibujar el contador pre-juego encima de todo
+        if self.pre_juego and self.mostrar_numero:
+            font_contador = pygame.font.SysFont(None, 120, bold=True)
+            texto = str(self.contador_inicio) if self.contador_inicio > 0 else "¡YA!"
+            surf = font_contador.render(texto, True, (255, 255, 50))
+            rect = surf.get_rect(center=(self.width // 2, self.height // 2))
+            self.pantalla.blit(surf, rect)
 
     def dibujar_ui(self):
         offset_x = 10
@@ -382,6 +396,19 @@ class JuegoView:
                 self.onJugar("victoria", puntaje=self.repartidor.puntaje)
 
     def actualizar(self, dt):
+        if self.pre_juego:
+            # Acumula tiempo para el contador
+            self.timer_contador += dt
+            if self.timer_contador >= self.tiempo_por_numero:
+                self.timer_contador = 0
+                self.contador_inicio -= 1
+                if self.contador_inicio < 0:
+                    self.pre_juego = False
+                    self.mostrar_numero = False
+                else:
+                    self.mostrar_numero = True
+            return
+
         self.tiempo_juego += dt
         self.weather.actualizar(dt)
 

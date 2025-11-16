@@ -1,12 +1,11 @@
 import pygame
-from main import volverAlMenu
-
 
 class PantallaVictoria:
-    def __init__(self, pantalla, puntaje, onJugar):
+    def __init__(self, pantalla, puntaje, onJugar, onVolver=None):
         self.pantalla = pantalla
         self.puntaje = puntaje
         self.onJugar = onJugar
+        self.onVolver = onVolver  # Función que vuelve al menú
 
         self.font = pygame.font.SysFont(None, 56)
         self.btnFont = pygame.font.SysFont(None, 30)
@@ -20,6 +19,8 @@ class PantallaVictoria:
         self.btn_w = 220
         self.btn_h = 52
         self.sep = 18
+
+        # Botones
         self.botones = [
             {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h),
              "texto": "Jugar de nuevo",
@@ -27,10 +28,9 @@ class PantallaVictoria:
              "hover": False},
             {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h),
              "texto": "Salir al menú",
-             "accion": lambda: volverAlMenu(),
+             "accion": self.onVolver,
              "hover": False},
         ]
-
 
         pygame.mixer.music.load("assets/music/Victoria.mp3")
         pygame.mixer.music.play(-1)
@@ -41,31 +41,28 @@ class PantallaVictoria:
         w, h = self.pantalla.get_size()
         margin_right = 40
         margin_bottom = 40
-
         total_h = len(self.botones) * self.btn_h + (len(self.botones) - 1) * self.sep
-        start_y = h - margin_bottom - total_h  # más abajo
-        x = w - margin_right - self.btn_w  # más a la derecha
-
+        start_y = h - margin_bottom - total_h
+        x = w - margin_right - self.btn_w
         for i, b in enumerate(self.botones):
             y = start_y + i * (self.btn_h + self.sep)
             b["rect"].topleft = (x, y)
 
     def manejarEvento(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN:   # Reiniciar
+            if event.key == pygame.K_RETURN:
                 self.onJugar("jugar")
-            elif event.key == pygame.K_ESCAPE: # Salir al menu
-                self.onJugar("menu")
+            elif event.key == pygame.K_ESCAPE and self.onVolver:
+                self.onVolver()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for b in self.botones:
                 if b["rect"].collidepoint(event.pos):
-                    b["accion"]()
+                    if b["accion"]:
+                        b["accion"]()
 
-    def actualizar(self,  dt=0):
+    def actualizar(self, dt=0):
         self.colocar_botones()
-
-        # Hover de los botones
         mpos = pygame.mouse.get_pos()
         for b in self.botones:
             b["hover"] = b["rect"].collidepoint(mpos)

@@ -60,17 +60,24 @@ def irAJuego(parametro=None, **kwargs):
         current_view = PantallaCreditos(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
     elif parametro == "reglas":
         current_view = PantallaReglas(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
-    elif parametro == "puntajes":
-        current_view = PantallaPuntaje(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
+
     elif parametro == "victoria":
         puntaje = kwargs.get("puntaje", 0)
-        current_view = PantallaVictoria(screen, puntaje=puntaje, onJugar=irAJugarModo)
+        current_view = PantallaVictoria(
+            screen,
+            puntaje=puntaje,
+            onJugar=irAJugarModo,
+            onVolver=volverAlMenu
+        )
+
     elif parametro == "derrota":
         puntaje = kwargs.get("puntaje", 0)
-        current_view = PantallaDerrota(screen, puntaje=puntaje, onJugar=irAJugarModo)
-    elif parametro == "menu":
-        volverAlMenu()
-
+        current_view = PantallaDerrota(
+            screen,
+            puntaje=puntaje,
+            onJugar=irAJugarModo,
+            onVolver=volverAlMenu
+        )
 
 
 def irAJugarModo():
