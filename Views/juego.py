@@ -32,7 +32,6 @@ class JuegoView:
         self.dificultad_cpu = dificultad_cpu
 
         if estado_cargado:
-            # --- Cargar desde un estado ---
             self.city_map = estado_cargado.city_map
             self.pedidos_disponibles = estado_cargado.pedidos_actuales
             self.tiempo_juego = estado_cargado.tiempo_juego
@@ -43,7 +42,6 @@ class JuegoView:
             self.repartidor_ia = RepartidorIA(start_tile_x_cpu, start_tile_y_cpu, TILE_WIDTH, self.dificultad_cpu)
             self._pedidos_iniciales_sesion = estado_cargado.pedidos_iniciales
         else:
-            # --- Iniciar una nueva partida ---
             if city_map is None or pedidos_disponibles is None:
                 raise ValueError("Se requiere 'city_map' y 'pedidos_disponibles' para una nueva partida.")
 
@@ -402,7 +400,6 @@ class JuegoView:
                 elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
                     self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
-        # <<< AQUÍ ES DONDE VA EL ALGORITMO DE IA (Greedy / Minimax / Expectimax) >>>
         self.repartidor_ia.actualizar_logica_ia(
             dt,
             self.city_map,
@@ -416,7 +413,6 @@ class JuegoView:
         en_parque_ia = tile_ia.type.name == "parque"
         self.repartidor_ia.update(dt, self.weather, en_parque_ia)
 
-        # Actualización del repartidor humano
         tile_humano = self.city_map.tiles[self.repartidor.tile_y][self.repartidor.tile_x]
         en_parque_humano = tile_humano.type.name == "parque"
         self.repartidor.update(dt, self.weather, en_parque_humano)

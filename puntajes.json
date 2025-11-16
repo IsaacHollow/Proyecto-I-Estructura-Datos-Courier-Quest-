@@ -66,6 +66,16 @@
             "fecha": "2025-10-06 17:14:17"
         },
         {
+            "puntaje": 1288,
+            "resultado": "derrota",
+            "fecha": "2025-11-16 13:26:19"
+        },
+        {
+            "puntaje": 1288,
+            "resultado": "derrota",
+            "fecha": "2025-11-16 13:35:02"
+        },
+        {
             "puntaje": 1282,
             "resultado": "victoria",
             "fecha": "2025-10-04 22:40:37"
@@ -89,16 +99,6 @@
             "puntaje": 930,
             "resultado": "victoria",
             "fecha": "2025-10-04 20:24:30"
-        },
-        {
-            "puntaje": 930,
-            "resultado": "victoria",
-            "fecha": "2025-10-04 20:35:41"
-        },
-        {
-            "puntaje": 930,
-            "resultado": "victoria",
-            "fecha": "2025-10-04 22:01:14"
         }
     ]
 }

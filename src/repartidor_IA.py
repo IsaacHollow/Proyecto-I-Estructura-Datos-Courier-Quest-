@@ -15,26 +15,16 @@ class RepartidorIA(Repartidor):
         self.dificultad = dificultad
         self.movimiento_timer = 0
         self.intervalo_movimiento_simple = 0.5
-
-        # Estado y objetivo para media/dificil
         self.estado: str = "BUSCANDO_PEDIDO"
         self.objetivo_actual: Optional[Pedido] = None
         self.ruta_actual: List[tuple[int, int]] = []
-
-        # Timers de decisión
-        self.intervalo_decision = 1.2  # más responsiva para media
+        self.intervalo_decision = 2.5
         self.decision_timer = self.intervalo_decision
-
-        # Inicializar sprites animados (si aplica)
         self.inicializar_sprites(ruta_base="assets/player2.png")
 
-    # ================================================================
-    #              SISTEMA DE DECISIÓN PRINCIPAL
-    # ================================================================
     def actualizar_logica_ia(self, dt: float, city_map: CityMap, colliders, weather,
                              pedidos_disponibles: List[Pedido], tiempo_juego: float):
 
-        # DIFICULTAD DIFÍCIL (ya implementada)
         if self.dificultad == "dificil":
             self._ejecutar_logica_dificil(dt, city_map, weather,
                                           pedidos_disponibles, tiempo_juego, colliders)
@@ -50,9 +40,9 @@ class RepartidorIA(Repartidor):
             self._ejecutar_logica_media(dt, city_map, colliders, weather, pedidos_disponibles, tiempo_juego)
             return
 
-    # ================================================================
-    #                    DIFICULTAD FÁCIL
-    # ================================================================
+
+    #DIFICULTAD FACIL
+
     def _ejecutar_logica_simple(self, dt, city_map, colliders, weather):
         self.movimiento_timer += dt
         if self.movimiento_timer >= self.intervalo_movimiento_simple and not self.is_moving:
@@ -60,49 +50,31 @@ class RepartidorIA(Repartidor):
             dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
             self.start_move(dx, dy, city_map, colliders, weather)
 
-    # ================================================================
-    #                💠 DIFICULTAD MEDIO: GREEDY BEST-FIRST 💠
-    # ================================================================
+    # DIFICULTAD MEDIA
+
     def _ejecutar_logica_media(self, dt, city_map, colliders, weather, pedidos: List[Pedido], tiempo_juego: float):
-        """
-        Flujo:
-         - Si ya tiene ruta (yendo a recogida/entrega) la sigue.
-         - Si está BUSCANDO_PEDIDO: cada intervalo_decision evalúa pedidos y fija el mejor (greedy).
-         - Si no hay pedido válido -> movimiento aleatorio ligero.
-        """
-        # Si ya está yendo a algo, procesar ruta igual que difícil
+
         if self.estado in ["YENDO_A_RECOGIDA", "YENDO_A_ENTREGA"]:
             self._procesar_movimiento_con_ruta(city_map, weather, colliders, tiempo_juego)
             return
-
-        # Evitar decidir si está en movimiento
         if self.is_moving:
             return
 
-        # Ciclo de decisión: elegir mejor pedido (greedy) cada intervalo
         self.decision_timer += dt
         if self.decision_timer < self.intervalo_decision:
-            # no ha llegado tiempo de decidir; pequeño "idle" o movimiento mínimo
             self.movimiento_timer += dt
             if self.movimiento_timer >= 1.2 and not self.is_moving:
                 self.movimiento_timer = 0
-                # movimiento suave aleatorio para que no esté estático
                 dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
-                # check básico de límites y edificios
                 nx, ny = self.tile_x + dx, self.tile_y + dy
                 if 0 <= nx < city_map.width and 0 <= ny < city_map.height and not city_map.tiles[ny][nx].type.blocked:
                     self.start_move(dx, dy, city_map, colliders, weather)
             return
 
-        # Resetear timer y evaluar pedidos
         self.decision_timer = 0
-
         pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time and p.status == "pendiente" and (getattr(p, "holder", None) in (None,))]
-
         mejor_pedido = self._seleccionar_pedido_greedy(pedidos_disponibles_ahora, city_map, tiempo_juego, weather)
-
         if mejor_pedido:
-            # fijar objetivo y ruta hacia casilla accesible de pickup
             self.objetivo_actual = mejor_pedido
             casilla_recogida = encontrar_casilla_accesible_adyacente(self.objetivo_actual.pickup, city_map)
             if casilla_recogida:
@@ -110,31 +82,18 @@ class RepartidorIA(Repartidor):
                 if ruta:
                     self.ruta_actual = ruta[1:]
                     self.estado = "YENDO_A_RECOGIDA"
-                    # marcar temporalmente el pedido como "tenido" provisorio para evitar que otro lo agarre
-                    # NOTE: no confirmamos hasta recoger, pero asignamos holder="cpu_pending" para competencia simple
-                    try:
-                        self.objetivo_actual.holder = "cpu_pending"
-                    except Exception:
-                        pass
                 else:
-                    # no ruta a la casilla de recogida: descartar y esperar siguiente ciclo
                     self.objetivo_actual = None
             else:
-                # no casilla accesible, descartar
                 self.objetivo_actual = None
         else:
-            # no hay pedidos buenos -> comportamiento de vagabundeo leve (evita edificios)
             dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
             nx, ny = self.tile_x + dx, self.tile_y + dy
             if 0 <= nx < city_map.width and 0 <= ny < city_map.height and not city_map.tiles[ny][nx].type.blocked:
                 self.start_move(dx, dy, city_map, colliders, weather)
 
     def _seleccionar_pedido_greedy(self, pedidos_validos: List[Pedido], city_map: CityMap, tiempo_juego: float, weather) -> Optional[Pedido]:
-        """
-        Heurística greedy simple:
-        score = alpha * expected_payout - beta * distance_cost - gamma * weather_penalty
-        Distance cost = coste ruta (A* steps) desde mi posición a la casilla de pickup + pickup->dropoff
-        """
+
         if not pedidos_validos:
             return None
 
@@ -153,17 +112,14 @@ class RepartidorIA(Repartidor):
             if not casilla_recogida or not casilla_entrega:
                 continue
 
-            # ruta desde yo -> recogida
             ruta1 = a_star_pathfinding(pos_actual, casilla_recogida, city_map)
             if not ruta1:
                 continue
-            # ruta desde recogida -> entrega
             ruta2 = a_star_pathfinding(casilla_recogida, casilla_entrega, city_map)
             if not ruta2:
                 continue
 
             costo = (len(ruta1) - 1) + (len(ruta2) - 1)
-            # penalización por clima: usar propiedad weather (asumo tiene estado_actual)
             clima_pen = 0
             estado_clima = getattr(weather, "estado_actual", None)
             if estado_clima in ("rain", "storm"):
@@ -171,19 +127,14 @@ class RepartidorIA(Repartidor):
             elif estado_clima == "rain_light":
                 clima_pen = 4
 
-            # expected payout: payout más prioridad bonus
             expected_payout = pedido.payout + pedido.priority * 10
 
-            # tiempo disponible
             tiempo_estimado = tiempo_juego + costo
             tiempo_restante = pedido.deadline - tiempo_estimado
-            # si está claramente fuera de deadline descartar
             if tiempo_restante < -30:
                 continue
 
             score = alpha * expected_payout - beta * costo - gamma * clima_pen
-
-            # small tie-breakers: prefer menos peso (más fácil) y mayor priority
             score += (pedido.priority * 2) - (pedido.weight * 0.5)
 
             if score > mejor_score:
@@ -192,9 +143,9 @@ class RepartidorIA(Repartidor):
 
         return mejor
 
-    # ================================================================
-    # DIFICULTAD DIFÍCIL (conservada, usa _procesar_movimiento_con_ruta)
-    # ================================================================
+
+    # DIFICULTAD DIFICIL
+
     def _ejecutar_logica_dificil(self, dt, city_map, weather, pedidos: List[Pedido],
                                  tiempo_juego: float, colliders):
 
@@ -221,9 +172,9 @@ class RepartidorIA(Repartidor):
         elif self.estado in ["YENDO_A_RECOGIDA", "YENDO_A_ENTREGA"]:
             self._procesar_movimiento_con_ruta(city_map, weather, colliders, tiempo_juego)
 
-    # ================================================================
-    # Procesamiento de ruta común (usado por medio y dificil)
-    # ================================================================
+
+    # Procesamiento de ruta comun
+
     def _procesar_movimiento_con_ruta(self, city_map, weather, colliders, tiempo_juego):
         # Si objetivo fue tomado por otro, resetear
         if not self.objetivo_actual or (self.estado == "YENDO_A_RECOGIDA" and getattr(self.objetivo_actual, "holder", None) not in (None, "cpu_pending")):
@@ -237,10 +188,7 @@ class RepartidorIA(Repartidor):
             self._reset_estado()
             return
 
-        # Seguir la ruta
         self._seguir_ruta(city_map, weather, colliders)
-
-        # Si ya llegamos al final de la ruta y no estamos moviendo, intentar acciones
         if not self.ruta_actual and not self.is_moving:
             if self.estado == "YENDO_A_RECOGIDA":
                 self._intentar_recoger(city_map)
@@ -258,7 +206,6 @@ class RepartidorIA(Repartidor):
             self.ruta_actual.pop(0)
 
     def _reset_estado(self):
-        # liberar marca pending si existe
         if self.objetivo_actual and getattr(self.objetivo_actual, "holder", None) == "cpu_pending":
             try:
                 self.objetivo_actual.holder = None
@@ -269,11 +216,8 @@ class RepartidorIA(Repartidor):
         self.ruta_actual = []
         self.decision_timer = 0
 
-    # ================================================================
-    # Métodos de selección/recogida/entrega (copiados y adaptados)
-    # ================================================================
+
     def _seleccionar_mejor_pedido(self, pedidos_disponibles: List[Pedido], city_map: CityMap, tiempo_juego: float) -> Optional[Pedido]:
-        # Esta función corresponde a tu versión "dificil" original (dejada igual)
         pedidos_validos = [p for p in pedidos_disponibles if p.status == "pendiente" and p.holder is None]
         if not pedidos_validos:
             return None
@@ -322,7 +266,6 @@ class RepartidorIA(Repartidor):
         if not self.objetivo_actual:
             return
 
-        # Verificar adyacencia real respecto a pickup (nota: usamos pickup original)
         if abs(self.tile_x - self.objetivo_actual.pickup[0]) + abs(self.tile_y - self.objetivo_actual.pickup[1]) <= 1:
             if self.inventario.agregar_pedido(self.objetivo_actual):
                 self.objetivo_actual.status = "en curso"
@@ -335,15 +278,12 @@ class RepartidorIA(Repartidor):
                         self.ruta_actual = ruta_entrega[1:]
                         self.estado = "YENDO_A_ENTREGA"
                     else:
-                        # no hay ruta a entrega, descartar
                         self._reset_estado()
                 else:
                     self._reset_estado()
             else:
-                # no pudo agregar al inventario (peso) -> reset
                 self._reset_estado()
         else:
-            # no está adyacente -> reset (posible que se movió otro)
             self._reset_estado()
 
     def _intentar_entregar(self, tiempo_juego: float):
