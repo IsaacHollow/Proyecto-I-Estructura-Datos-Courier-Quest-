@@ -64,14 +64,11 @@ class Repartidor:
                 for j in range(4):
                     rect_corte = pygame.Rect(j * frame_w, i * frame_h, frame_w, frame_h)
                     frame_original = sheet.subsurface(rect_corte)
-
                     bounding_rect = frame_original.get_bounding_rect()
-
-                    frame_recortado = frame_original.subsurface(bounding_rect)
-
-                    frame_escalado = pygame.transform.scale(frame_recortado, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
-
-                    self.sprites[dir_name].append(frame_escalado)
+                    if bounding_rect.width > 0 and bounding_rect.height > 0:
+                        frame_recortado = frame_original.subsurface(bounding_rect)
+                        frame_escalado = pygame.transform.scale(frame_recortado, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+                        self.sprites[dir_name].append(frame_escalado)
 
         self.actualizar_imagen()
 
@@ -82,11 +79,11 @@ class Repartidor:
 
     def actualizar_imagen(self):
         frame_set = self.sprites.get(self.direccion)
-        if not frame_set: return
+        if not frame_set or not self.sprites[self.direccion]: return
 
         if self.es_animado:
             if self.is_moving:
-                self.imagen = frame_set[self.frame_actual]
+                self.imagen = frame_set[self.frame_actual % len(frame_set)]
             else:
                 self.imagen = frame_set[0]
         else:
@@ -99,7 +96,7 @@ class Repartidor:
     def obtener_multiplicador_pago(self):
         return 1.05 if self.reputacion >= 90.0 else 1.0
 
-    def start_move(self, dx, dy, city_map, colliders, clima):
+    def start_move(self, dx, dy, city_map, colliders, clima, check_blocked=True):
         if self.is_moving or self.exhausto: return
 
         next_tile_x = self.tile_x + dx
@@ -107,13 +104,14 @@ class Repartidor:
 
         if not (0 <= next_tile_x < city_map.width and 0 <= next_tile_y < city_map.height): return
 
-        next_tile_type = city_map.tiles[next_tile_y][next_tile_x].type
-        if next_tile_type.blocked: return
+        if check_blocked:
+            next_tile_type = city_map.tiles[next_tile_y][next_tile_x].type
+            if next_tile_type.blocked: return
 
         m_resistencia = 0.8 if self.resistencia <= 30 else 1.0
         m_rep = 1.03 if self.reputacion >= 90 else 1.0
         m_peso = max(0.8, 1 - 0.03 * self.inventario.peso_total)
-        m_clima = clima.obtener_multiplicador()
+        m_clima = clima.obtener_multiplicador() if hasattr(clima, 'obtener_multiplicador') else 1.0
         current_tile = city_map.tiles[self.tile_y][self.tile_x]
         surface_weight = current_tile.type.surface_weight or 1.0
         v_celdas_por_seg = self.v0_celdas_por_seg * m_clima * m_peso * m_rep * m_resistencia * surface_weight
@@ -126,30 +124,24 @@ class Repartidor:
         self.is_moving = True
         self.movimiento_iniciado = True
 
-        if dx > 0:
-            self.direccion = "derecha"
-        elif dx < 0:
-            self.direccion = "izquierda"
-        elif dy > 0:
-            self.direccion = "abajo"
-        elif dy < 0:
-            self.direccion = "arriba"
+        if dx > 0: self.direccion = "derecha"
+        elif dx < 0: self.direccion = "izquierda"
+        elif dy > 0: self.direccion = "abajo"
+        elif dy < 0: self.direccion = "arriba"
         self.actualizar_imagen()
 
     def update(self, dt, clima, en_parque):
-        # Lógica de animación
         if self.es_animado and self.is_moving:
             self.anim_timer += dt
             if self.anim_timer > 0.15:
                 self.anim_timer = 0
-                self.frame_actual = (self.frame_actual + 1) % 4
+                self.frame_actual = (self.frame_actual + 1)
                 self.actualizar_imagen()
 
-        # Lógica de movimiento
         if self.is_moving:
             if self.movimiento_iniciado:
                 consumo = 0.5 + (0.2 * (self.inventario.peso_total - 3.0) if self.inventario.peso_total > 3.0 else 0)
-                consumo += clima.obtener_extra_resistencia()
+                consumo += clima.obtener_extra_resistencia() if hasattr(clima, 'obtener_extra_resistencia') else 0
                 self.resistencia -= consumo
                 self.movimiento_iniciado = False
 
@@ -166,15 +158,12 @@ class Repartidor:
                 self.px += (dx / distance) * move_dist
                 self.py += (dy / distance) * move_dist
 
-        # Lógica de energía
         else:
             recuperacion = 10.0 if en_parque else 5.0
             self.resistencia += recuperacion * dt
 
-        if self.exhausto and self.resistencia >= 30:
-            self.exhausto = False
-        elif not self.exhausto and self.resistencia <= 0:
-            self.exhausto = True
+        if self.exhausto and self.resistencia >= 30: self.exhausto = False
+        elif not self.exhausto and self.resistencia <= 0: self.exhausto = True
         self.resistencia = min(100.0, max(0.0, self.resistencia))
 
         offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
