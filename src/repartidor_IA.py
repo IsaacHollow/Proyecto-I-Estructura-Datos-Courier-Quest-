@@ -39,6 +39,7 @@ class RepartidorIA(Repartidor):
         self.decision_timer += dt
         if self.estado == "BUSCANDO_PEDIDO":
             if self.decision_timer >= self.intervalo_decision:
+                print("\n--- CICLO DE DECISIÓN IA ---")
                 self.decision_timer = 0
                 pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time]
                 mejor_pedido = self._seleccionar_mejor_pedido(pedidos_disponibles_ahora, city_map, tiempo_juego)
@@ -46,16 +47,20 @@ class RepartidorIA(Repartidor):
                     self.objetivo_actual = mejor_pedido
                     ruta = a_star_pathfinding((self.tile_x, self.tile_y), self.objetivo_actual.pickup, city_map)
                     if ruta:
-                        self.ruta_actual = ruta
+                        self.ruta_actual = ruta[1:]  # Excluimos el nodo actual
                         self.estado = "YENDO_A_RECOGIDA"
-                        print(f"IA [DIFÍCIL]: Nuevo objetivo: {self.objetivo_actual.id}. Ruta a recogida calculada.")
+                        print(
+                            f"IA [ACCIÓN]: Objetivo fijado: {self.objetivo_actual.id}. Ruta: {len(self.ruta_actual)} pasos.")
+                else:
+                    print("IA [INFO]: No se seleccionó ningún pedido en este ciclo.")
+
         elif self.estado in ["YENDO_A_RECOGIDA", "YENDO_A_ENTREGA"]:
             self._procesar_movimiento_con_ruta(city_map, weather, colliders, tiempo_juego)
 
     def _procesar_movimiento_con_ruta(self, city_map, weather, colliders, tiempo_juego):
         if not self.objetivo_actual or (
                 self.estado == "YENDO_A_RECOGIDA" and self.objetivo_actual.holder not in [None, 'cpu']):
-            print(f"IA [DIFÍCIL]: El objetivo fue tomado o ya no es válido. Buscando nuevo pedido.")
+            print(f"IA [ALERTA]: El objetivo fue tomado por otro. Reiniciando.")
             self._reset_estado()
             return
 
@@ -76,8 +81,10 @@ class RepartidorIA(Repartidor):
         self.start_move(dx, dy, city_map, colliders, weather, check_blocked=False)
         if self.is_moving:
             self.ruta_actual.pop(0)
+            # print(f"IA moviendo a ({self.tile_x+dx}, {self.tile_y+dy}). Pasos restantes: {len(self.ruta_actual)}")
 
     def _reset_estado(self):
+        print("IA [INFO]: Estado reseteado a BUSCANDO_PEDIDO.")
         self.estado = "BUSCANDO_PEDIDO"
         self.objetivo_actual = None
         self.ruta_actual = []
@@ -86,7 +93,9 @@ class RepartidorIA(Repartidor):
     def _seleccionar_mejor_pedido(self, pedidos_disponibles: List[Pedido], city_map: CityMap, tiempo_juego: float) -> \
     Optional[Pedido]:
         pedidos_validos = [p for p in pedidos_disponibles if p.status == "pendiente" and p.holder is None]
-        if not pedidos_validos: return None
+        print(f"IA [DIAGNÓSTICO]: {len(pedidos_validos)} pedidos disponibles para evaluar.")
+        if not pedidos_validos:
+            return None
 
         mejor_pedido = None
         mejor_puntuacion = -float('inf')
@@ -94,18 +103,32 @@ class RepartidorIA(Repartidor):
         for pedido in pedidos_validos:
             pos_actual = (self.tile_x, self.tile_y)
             ruta_recogida = a_star_pathfinding(pos_actual, pedido.pickup, city_map)
-            if not ruta_recogida: continue
+            if not ruta_recogida:
+                print(f"IA [DIAGNÓSTICO]: Pedido {pedido.id} descartado (no se encontró ruta de recogida).")
+                continue
 
             ruta_entrega = a_star_pathfinding(pedido.pickup, pedido.dropoff, city_map)
-            if not ruta_entrega: continue
+            if not ruta_entrega:
+                print(f"IA [DIAGNÓSTICO]: Pedido {pedido.id} descartado (no se encontró ruta de entrega).")
+                continue
 
-            costo_total = len(ruta_recogida) + len(ruta_entrega)
+            # El costo es el número de pasos. A* devuelve el camino incluyendo el nodo de inicio.
+            costo_recogida = len(ruta_recogida) - 1
+            costo_entrega = len(ruta_entrega) - 1
+            costo_total = costo_recogida + costo_entrega
+
             tiempo_estimado_al_final = tiempo_juego + costo_total
             tiempo_restante = pedido.deadline - tiempo_estimado_al_final
 
-            if tiempo_restante < -30: continue
+            print(
+                f"IA [DIAGNÓSTICO]: Evaluando {pedido.id} -> Costo: {costo_total}, Deadline: {pedido.deadline}, T. Estimado: {tiempo_estimado_al_final:.1f}, T. Restante: {tiempo_restante:.1f}")
+
+            if tiempo_restante < -30:
+                print(f"IA [DIAGNÓSTICO]: Pedido {pedido.id} descartado (demasiado tarde).")
+                continue
 
             puntuacion = (pedido.payout + pedido.priority * 50) / (costo_total * 1.5 + pedido.weight * 5 + 1)
+            print(f"IA [DIAGNÓSTICO]: Pedido {pedido.id} -> Puntuación calculada: {puntuacion:.2f}")
 
             if puntuacion > mejor_puntuacion:
                 mejor_puntuacion = puntuacion
@@ -115,14 +138,16 @@ class RepartidorIA(Repartidor):
 
     def _intentar_recoger(self, city_map: CityMap):
         if not self.objetivo_actual: return
+        print(f"IA [ACCIÓN]: Intentando recoger {self.objetivo_actual.id} en ({self.tile_x}, {self.tile_y})")
         if abs(self.tile_x - self.objetivo_actual.pickup[0]) + abs(self.tile_y - self.objetivo_actual.pickup[1]) <= 1:
             if self.inventario.agregar_pedido(self.objetivo_actual):
                 self.objetivo_actual.status = "en curso"
                 self.objetivo_actual.holder = "cpu"
                 ruta_entrega = a_star_pathfinding((self.tile_x, self.tile_y), self.objetivo_actual.dropoff, city_map)
                 if ruta_entrega:
-                    self.ruta_actual = ruta_entrega
+                    self.ruta_actual = ruta_entrega[1:]
                     self.estado = "YENDO_A_ENTREGA"
+                    print(f"IA [ACCIÓN]: Pedido recogido. Nueva ruta a entrega: {len(self.ruta_actual)} pasos.")
                 else:
                     self._reset_estado()
             else:
@@ -132,10 +157,12 @@ class RepartidorIA(Repartidor):
 
     def _intentar_entregar(self, tiempo_juego: float):
         if not self.objetivo_actual: return
+        print(f"IA [ACCIÓN]: Intentando entregar {self.objetivo_actual.id} en ({self.tile_x}, {self.tile_y})")
         if abs(self.tile_x - self.objetivo_actual.dropoff[0]) + abs(self.tile_y - self.objetivo_actual.dropoff[1]) <= 1:
             if self.inventario.entregar_pedido(self.objetivo_actual):
                 self.objetivo_actual.status = "entregado"
                 self._procesar_pago(tiempo_juego)
+                print(f"IA [ACCIÓN]: Pedido entregado. Puntaje actual: {self.puntaje}")
                 self._reset_estado()
             else:
                 self._reset_estado()
@@ -153,7 +180,6 @@ class RepartidorIA(Repartidor):
                 bonificacion = pago_base * 0.20
             elif ratio >= 0.2:
                 bonificacion = pago_base * 0.10
-
         self.puntaje += int((pago_base + bonificacion) * self.obtener_multiplicador_pago())
         delta_rep = 0
         if ventana_tiempo > 0 and tiempo_restante >= 0.2 * ventana_tiempo:
