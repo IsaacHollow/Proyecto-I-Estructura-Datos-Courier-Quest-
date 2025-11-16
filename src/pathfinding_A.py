@@ -10,8 +10,7 @@ def a_star_pathfinding(start_pos, goal_pos, city_map):
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
     open_set = []
-    initial_f_score = heuristic(start_pos, goal_pos)
-    heapq.heappush(open_set, (initial_f_score, 0, start_pos))
+    heapq.heappush(open_set, (heuristic(start_pos, goal_pos), 0, start_pos))
 
     came_from = {}
     g_score = {(x, y): float('inf') for y in range(city_map.height) for x in range(city_map.width)}
@@ -21,14 +20,15 @@ def a_star_pathfinding(start_pos, goal_pos, city_map):
         _, current_g, current_pos = heapq.heappop(open_set)
 
         if current_pos == goal_pos:
-            # Reconstruir la ruta correctamente
+            # --- CORRECCIÓN FINAL EN LA RECONSTRUCCIÓN DE LA RUTA ---
             path = []
-            temp_pos = current_pos
-            while temp_pos in came_from:
-                path.append(temp_pos)
-                temp_pos = came_from[temp_pos]
-            path.append(start_pos)  # Añadir el nodo inicial
-            return path[::-1]  # Devolver en el orden correcto (inicio -> fin)
+            current = current_pos
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            path.append(start_pos)  # Añadimos el punto de partida
+            return path[::-1]  # Invertimos para obtener la ruta desde el inicio al fin
+            # --- FIN DE LA CORRECCIÓN ---
 
         for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
             neighbor_pos = (current_pos[0] + dx, current_pos[1] + dy)
