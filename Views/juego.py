@@ -30,6 +30,7 @@ class JuegoView:
         self.onJugar = onJugar
         self.save_manager = SaveManager()
         self.dificultad_cpu = dificultad_cpu
+        # self.establecer_objetivo_por_dificultad()
 
         if estado_cargado:
             self.city_map = estado_cargado.city_map
@@ -63,7 +64,7 @@ class JuegoView:
             self.weather = Weather()
 
         self.score_manager = ScoreManager()
-        self.goal_income = getattr(self.city_map, "goal")
+        self.goal_income = 1200
         self.time_limit = getattr(self.city_map, "max_time")
         self._fin_juego_iniciado = False
 
@@ -464,3 +465,4 @@ class JuegoView:
             weather=self.weather
         )
         self.save_manager.guardar_partida(estado, slot)
+

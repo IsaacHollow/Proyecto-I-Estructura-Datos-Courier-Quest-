@@ -290,3 +290,5 @@ ________________________________________________________________________________
 
 # Fecha de entrega: 28 de septiembre de 2025
 # Nueva Fecha de entrega: 5 de octubre de 2025
+
+# Fecha de entrega proyecto #2:  16 de noviembre 2025

@@ -2,8 +2,6 @@
 # Aca vamos a ir agregando los prompts de IA que vamos a usar
 # Recuerden que se penalizara la copia directa sin explicacion del codigo
 
-
-
    # Prompts de IA 
 
 
@@ -59,7 +57,6 @@ En este prompt también se tomo bastante de los ejemplos de IA pues habían cier
 Para cargar los pedidos del API se pidió bastante explicación, aquí un resumen de la información tomada de la IA:
 
 "
-
     Obtención de Datos Crudos:
 
     La función comienza haciendo una petición HTTP GET a la url que se le pasa como argumento.

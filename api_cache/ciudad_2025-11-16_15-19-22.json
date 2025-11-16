@@ -5,7 +5,7 @@
         "city_name": "TigerCity",
         "width": 30,
         "height": 30,
-        "goal": 1200.0,
+        "goal": 1500.0,
         "max_time": 900,
         "start_time": "2025-09-01T12:00:00Z",
         "tiles": [
