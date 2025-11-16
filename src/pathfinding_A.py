@@ -20,15 +20,13 @@ def a_star_pathfinding(start_pos, goal_pos, city_map):
         _, current_g, current_pos = heapq.heappop(open_set)
 
         if current_pos == goal_pos:
-            # --- CORRECCIÓN FINAL EN LA RECONSTRUCCIÓN DE LA RUTA ---
             path = []
             current = current_pos
-            while current in came_from:
+            while current != start_pos: # El bucle se ejecuta hasta llegar al inicio
                 path.append(current)
                 current = came_from[current]
-            path.append(start_pos)  # Añadimos el punto de partida
-            return path[::-1]  # Invertimos para obtener la ruta desde el inicio al fin
-            # --- FIN DE LA CORRECCIÓN ---
+            path.append(start_pos)  # Finalmente, se añade el inicio
+            return path[::-1]       # Y se invierte para tener el orden correcto
 
         for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
             neighbor_pos = (current_pos[0] + dx, current_pos[1] + dy)
