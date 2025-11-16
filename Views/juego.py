@@ -1,6 +1,5 @@
 import pygame
 from datetime import timedelta
-
 from src.camera import Camera
 from src.repartidor import Repartidor
 from src.weather import Weather
@@ -403,7 +402,7 @@ class JuegoView:
                 elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
                     self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
-        # Lógica y actualización del repartidor IA
+        # <<< AQUÍ ES DONDE VA EL ALGORITMO DE IA (Greedy / Minimax / Expectimax) >>>
         self.repartidor_ia.actualizar_logica_ia(
             dt,
             self.city_map,
@@ -412,6 +411,7 @@ class JuegoView:
             self.pedidos_disponibles,
             self.tiempo_juego
         )
+
         tile_ia = self.city_map.tiles[self.repartidor_ia.tile_y][self.repartidor_ia.tile_x]
         en_parque_ia = tile_ia.type.name == "parque"
         self.repartidor_ia.update(dt, self.weather, en_parque_ia)
