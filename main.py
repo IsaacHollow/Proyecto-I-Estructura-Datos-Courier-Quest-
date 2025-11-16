@@ -72,6 +72,7 @@ def irAJuego(parametro=None, **kwargs):
         volverAlMenu()
 
 
+
 def irAJugarModo():
     reproducir_musica("assets/music/Elegir_Juego2.mp3")
     global current_view
@@ -119,8 +120,13 @@ while running:
 
     if paused:
         screen.fill((0, 0, 0))
+
         pause_text = font.render("JUEGO PAUSADO - Presione ESC para continuar", True, WHITE)
-        screen.blit(pause_text, pause_text.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+        salir_text = font.render("Presione P para salir al menú", True, WHITE)
+
+        screen.blit(pause_text, pause_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 20)))
+        screen.blit(salir_text, salir_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20)))
+
         pygame.display.flip()
         continue
 

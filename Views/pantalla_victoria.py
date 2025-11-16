@@ -1,4 +1,6 @@
 import pygame
+from main import volverAlMenu
+
 
 class PantallaVictoria:
     def __init__(self, pantalla, puntaje, onJugar):
@@ -19,9 +21,16 @@ class PantallaVictoria:
         self.btn_h = 52
         self.sep = 18
         self.botones = [
-            {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h), "texto": "Jugar de nuevo", "accion": lambda: self.onJugar("jugar"), "hover": False},
-            {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h), "texto": "Salir al menú", "accion": lambda: self.onJugar("menu"), "hover": False},
+            {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h),
+             "texto": "Jugar de nuevo",
+             "accion": self.onJugar,
+             "hover": False},
+            {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h),
+             "texto": "Salir al menú",
+             "accion": lambda: volverAlMenu(),
+             "hover": False},
         ]
+
 
         pygame.mixer.music.load("assets/music/Victoria.mp3")
         pygame.mixer.music.play(-1)
