@@ -90,7 +90,6 @@ def load_pedidos(url: str, map_start_time: str) -> list[Pedido]:
     for item in raw:
         if not isinstance(item, dict): continue
 
-        # LÓGICA DE TIEMPO CORREGIDA
         try:
             #Obtener tiempos originales en segundos
             release_time_original = int(item.get("release_time", 0))
@@ -107,7 +106,7 @@ def load_pedidos(url: str, map_start_time: str) -> list[Pedido]:
             release_time_acelerado = int(release_time_original / FACTOR_ACELERACION)
             ventana_tiempo_acelerada = int(ventana_tiempo_original / FACTOR_ACELERACION)
 
-            #Calcular el nuevo deadline acelerado
+            #Calcular el nuevo deadline acelerado como un punto en el tiempo de juego
             deadline_acelerado = release_time_acelerado + ventana_tiempo_acelerada
 
             pedido = Pedido(

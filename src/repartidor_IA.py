@@ -5,6 +5,7 @@ from src.pedidos import Pedido
 from typing import List, Optional
 
 from src.pathfinding_A import a_star_pathfinding
+from src.mapa import CityMap
 
 
 class RepartidorIA(Repartidor):
@@ -23,7 +24,7 @@ class RepartidorIA(Repartidor):
 
         self.inicializar_sprites(ruta_base="assets/player2.png")
 
-    def actualizar_logica_ia(self, dt: float, city_map, colliders, weather, pedidos_disponibles: List[Pedido],
+    def actualizar_logica_ia(self, dt: float, city_map: CityMap, colliders, weather, pedidos_disponibles: List[Pedido],
                              tiempo_juego: float):
         if self.dificultad in ["facil", "medio"]:
             self._ejecutar_logica_simple(dt, city_map, colliders, weather)
@@ -44,6 +45,7 @@ class RepartidorIA(Repartidor):
             if self.decision_timer >= self.intervalo_decision:
                 self.decision_timer = 0
                 pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time]
+
                 mejor_pedido = self._seleccionar_mejor_pedido(pedidos_disponibles_ahora, city_map, tiempo_juego)
 
                 if mejor_pedido:
@@ -88,8 +90,8 @@ class RepartidorIA(Repartidor):
         self.ruta_actual = []
         self.decision_timer = 0
 
-    def _seleccionar_mejor_pedido(self, pedidos_disponibles: List[Pedido], city_map, tiempo_juego: float) -> Optional[
-        Pedido]:
+    def _seleccionar_mejor_pedido(self, pedidos_disponibles: List[Pedido], city_map: CityMap, tiempo_juego: float) -> \
+    Optional[Pedido]:
         pedidos_validos = [p for p in pedidos_disponibles if p.status == "pendiente" and p.holder is None]
         print(f"IA [DIAGNÓSTICO]: Encontrados {len(pedidos_validos)} pedidos válidos para evaluar.")
         if not pedidos_validos:
@@ -112,9 +114,13 @@ class RepartidorIA(Repartidor):
             costo_entrega = len(ruta_entrega)
             costo_total = costo_recogida + costo_entrega
 
+            tiempo_estimado_al_final = tiempo_juego + costo_total
+            tiempo_restante = pedido.deadline - tiempo_estimado_al_final
 
-            tiempo_restante = pedido.deadline - (tiempo_juego + costo_total)
-            if tiempo_restante < -30:
+            print(
+                f"IA [DIAGNÓSTICO]: Pedido {pedido.id} -> Deadline: {pedido.deadline}, Tiempo estimado: {tiempo_estimado_al_final:.1f}, Restante: {tiempo_restante:.1f}")
+
+            if tiempo_restante < 0:
                 continue
 
             puntuacion = (pedido.payout + pedido.priority * 50) / (costo_total * 1.5 + pedido.weight * 5 + 1)
@@ -131,7 +137,7 @@ class RepartidorIA(Repartidor):
             print("IA [DIFÍCIL]: No se ha seleccionado ningún pedido en este ciclo de decisión.")
         return mejor_pedido
 
-    def _intentar_recoger(self, city_map):
+    def _intentar_recoger(self, city_map: CityMap):
         if not self.objetivo_actual: return
         print(f"IA [DIFÍCIL]: Ha llegado a la ubicación de recogida del pedido {self.objetivo_actual.id}.")
         if abs(self.tile_x - self.objetivo_actual.pickup[0]) + abs(self.tile_y - self.objetivo_actual.pickup[1]) <= 1:
