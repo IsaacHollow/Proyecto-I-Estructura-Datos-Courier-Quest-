@@ -63,8 +63,14 @@ class Repartidor:
                 self.sprites[dir_name] = []
                 for j in range(4):
                     rect_corte = pygame.Rect(j * frame_w, i * frame_h, frame_w, frame_h)
-                    frame = sheet.subsurface(rect_corte)
-                    frame_escalado = pygame.transform.scale(frame, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+                    frame_original = sheet.subsurface(rect_corte)
+
+                    bounding_rect = frame_original.get_bounding_rect()
+
+                    frame_recortado = frame_original.subsurface(bounding_rect)
+
+                    frame_escalado = pygame.transform.scale(frame_recortado, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+
                     self.sprites[dir_name].append(frame_escalado)
 
         self.actualizar_imagen()
