@@ -27,6 +27,7 @@ font = pygame.font.Font(None, 36)
 
 current_view = None
 paused = False
+dificultad_cpu_actual = "facil"  # Valor por defecto
 
 
 def reproducir_musica(ruta):
@@ -39,59 +40,53 @@ def reproducir_musica(ruta):
 def irAJuego(parametro=None, **kwargs):
     global current_view
 
-    if parametro is not None and not isinstance(parametro, str):
-        mapa = parametro
+    if parametro == "jugar_ia":
+        mapa = load_city_map(MAP_URL)
         pedidos = load_pedidos(PEDIDOS_URL, mapa.start_time) if mapa.start_time else []
-        current_view = JuegoView(screen, onJugar=irAJuego, city_map=mapa, pedidos_disponibles=pedidos)
+        dificultad = kwargs.get("dificultad", "facil")
+        current_view = JuegoView(screen, onJugar=irAJuego, city_map=mapa, pedidos_disponibles=pedidos,
+                                 dificultad_cpu=dificultad)
         reproducir_musica("assets/music/game_theme.mp3")
         return
 
     if parametro == "cargar_juego":
         estado = kwargs.get("estado_cargado")
-        current_view = JuegoView(screen, onJugar=irAJuego, estado_cargado=estado)
+        dificultad = kwargs.get("dificultad", "facil")
+        current_view = JuegoView(screen, onJugar=irAJuego, estado_cargado=estado, dificultad_cpu=dificultad)
         reproducir_musica("assets/music/game_theme.mp3")
         return
 
     if parametro == "creditos":
         current_view = PantallaCreditos(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
-
     elif parametro == "reglas":
         current_view = PantallaReglas(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
-
     elif parametro == "puntajes":
         current_view = PantallaPuntaje(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
-
     elif parametro == "victoria":
         puntaje = kwargs.get("puntaje", 0)
-        current_view = PantallaVictoria(screen, puntaje=puntaje, onJugar=irAJuego)
-
+        current_view = PantallaVictoria(screen, puntaje=puntaje, onJugar=irAJugarModo)
     elif parametro == "derrota":
         puntaje = kwargs.get("puntaje", 0)
-        current_view = PantallaDerrota(screen, puntaje=puntaje, onJugar=irAJuego)
-
-    elif parametro == "jugar":
-        mapa = load_city_map(MAP_URL)
-        pedidos = load_pedidos(PEDIDOS_URL, mapa.start_time) if mapa.start_time else []
-        current_view = JuegoView(screen, onJugar=irAJuego, city_map=mapa, pedidos_disponibles=pedidos)
-        reproducir_musica("assets/music/game_theme.mp3")
+        current_view = PantallaDerrota(screen, puntaje=puntaje, onJugar=irAJugarModo)
+    elif parametro == "menu":
+        volverAlMenu()
 
 
 def irAJugarModo():
     reproducir_musica("assets/music/Elegir_Juego2.mp3")
     global current_view
 
-    def jugar_solo():
-        irAJuego("jugar")
-
     def jugar_con_ia(dificultad):
-        irAJuego("jugar")
+        global dificultad_cpu_actual
+        dificultad_cpu_actual = dificultad
+        irAJuego("jugar_ia", dificultad=dificultad)
 
     current_view = PantallaModoJuego(
         screen,
         WIDTH,
         HEIGHT,
-        onJugarSolo=jugar_solo,
-        onJugarIA=jugar_con_ia
+        onJugarIA=jugar_con_ia,
+        onVolver=volverAlMenu
     )
 
 
@@ -102,16 +97,12 @@ def volverAlMenu():
 
 
 volverAlMenu()
-
 running = True
 
 while running:
     dt = clock.tick(60) / 1000
-
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
+        if event.type == pygame.QUIT: running = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE and isinstance(current_view, JuegoView):
                 paused = not paused
@@ -120,11 +111,11 @@ while running:
                 volverAlMenu()
                 paused = False
 
-        if current_view is not None:
-            if hasattr(current_view, "manejar_evento"):
-                current_view.manejar_evento(event)
-            elif hasattr(current_view, "manejarEvento"):
-                current_view.manejarEvento(event)
+        # El nombre estandarizado es `manejar_evento`
+        if current_view and hasattr(current_view, "manejar_evento"):
+            current_view.manejar_evento(event)
+        elif current_view and hasattr(current_view, "manejarEvento"):
+            current_view.manejarEvento(event)
 
     if paused:
         screen.fill((0, 0, 0))
@@ -133,11 +124,9 @@ while running:
         pygame.display.flip()
         continue
 
-    if current_view is not None:
-        if hasattr(current_view, "actualizar"):
-            current_view.actualizar(dt)
-        if hasattr(current_view, "dibujar"):
-            current_view.dibujar()
+    if current_view:
+        if hasattr(current_view, "actualizar"): current_view.actualizar(dt)
+        if hasattr(current_view, "dibujar"): current_view.dibujar()
 
     pygame.display.flip()
 

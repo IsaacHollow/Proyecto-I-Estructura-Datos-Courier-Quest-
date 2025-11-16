@@ -2,6 +2,7 @@ import pygame
 from dataclasses import dataclass, field
 from typing import Tuple, Optional
 
+
 @dataclass
 class Pedido:
     id: str
@@ -12,7 +13,8 @@ class Pedido:
     release_time: int
     pickup: Tuple[int, int]
     dropoff: Tuple[int, int]
-    status: str = "pendiente"     # pendiente, en curso, entregado
+    status: str = "pendiente"
+    holder: Optional[str] = None
     sprite_pickup: str = "assets/package.png"
     sprite_dropoff: str = "assets/destination_marker.png"
     imagen: Optional[pygame.Surface] = field(default=None)
@@ -23,7 +25,7 @@ class Pedido:
 
     def tiempo_restante(self, tiempo_actual: int) -> int:
         return max(0, self.deadline - tiempo_actual)
-    
+
     def cargar_sprite(self, size: Tuple[int, int]):
         if self.status == "pendiente":
             ruta = self.sprite_pickup
@@ -32,7 +34,7 @@ class Pedido:
         else:
             self.imagen = None
             return
-        
+
         self.imagen = pygame.image.load(ruta).convert_alpha()
         self.imagen = pygame.transform.scale(self.imagen, size)
 

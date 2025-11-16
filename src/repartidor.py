@@ -5,6 +5,7 @@ from src.inventario import Inventario
 REPARTIDOR_ANCHO = 27
 REPARTIDOR_ALTO = 27
 
+
 class Repartidor:
     def __init__(self, start_tile_x, start_tile_y, tile_size):
         self.tile_x = start_tile_x
@@ -22,12 +23,15 @@ class Repartidor:
         self.move_speed_px_por_seg = 0
 
         self.direccion = "derecha"
-        self.sprites = {}  # Se inicializa vacío
-        self.imagen = None  # Se inicializa vacío
-        self.inicializar_sprites()
+        self.sprites = {}
+        self.imagen = None
 
-        self.direccion = "derecha"
-        self.imagen = self.sprites[self.direccion]
+        # Atributos de animación
+        self.anim_timer = 0.0
+        self.frame_actual = 0
+        self.es_animado = False
+
+        self.inicializar_sprites()
 
         offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
         offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
@@ -43,23 +47,47 @@ class Repartidor:
         self.inventario = Inventario(peso_max=7.0)
         self.racha_sin_penalizacion = 0
 
+    def inicializar_sprites(self, ruta_base="assets/bicycle_down.png"):
+        self.sprites = {}
+        self.es_animado = "player2" in ruta_base
 
-    def inicializar_sprites(self):
-        sprites_orig = {
-            "arriba": pygame.image.load("assets/bicycle_up.png").convert_alpha(),
-            "abajo": pygame.image.load("assets/bicycle_down.png").convert_alpha(),
-            "izquierda": pygame.image.load("assets/bicycle_left.png").convert_alpha(),
-            "derecha": pygame.image.load("assets/bicycle_right.png").convert_alpha()
-        }
+        if not self.es_animado:
+            sprites_orig = {
+                "arriba": pygame.image.load("assets/bicycle_up.png").convert_alpha(),
+                "abajo": pygame.image.load("assets/bicycle_down.png").convert_alpha(),
+                "izquierda": pygame.image.load("assets/bicycle_left.png").convert_alpha(),
+                "derecha": pygame.image.load("assets/bicycle_right.png").convert_alpha()
+            }
+            for key, sprite in sprites_orig.items():
+                self.sprites[key] = pygame.transform.scale(sprite, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+        else:
+            sheet = pygame.image.load(ruta_base).convert_alpha()
+            frame_w = sheet.get_width() // 4
+            frame_h = sheet.get_height() // 4
 
-        self.sprites = {key: pygame.transform.scale(sprite, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
-                        for key, sprite in sprites_orig.items()}
+            direcciones_map = ["abajo", "izquierda", "derecha", "arriba"]
+            for i, dir_name in enumerate(direcciones_map):
+                self.sprites[dir_name] = []
+                for j in range(4):
+                    rect = pygame.Rect(j * frame_w, i * frame_h, frame_w, frame_h)
+                    frame = sheet.subsurface(rect)
 
-        self.imagen = self.sprites[self.direccion]
+                    frame_escalado = pygame.transform.scale(frame, (REPARTIDOR_ANCHO, REPARTIDOR_ALTO))
+                    self.sprites[dir_name].append(frame_escalado)
 
-        offset_x = (self.tile_size - REPARTIDOR_ANCHO) // 2
-        offset_y = (self.tile_size - REPARTIDOR_ALTO) // 2
-        self.rect = self.imagen.get_rect(topleft=(self.px + offset_x, self.py + offset_y))
+        self.actualizar_imagen()
+
+    def actualizar_imagen(self):
+        frame_set = self.sprites.get(self.direccion)
+        if not frame_set: return
+
+        if self.es_animado:
+            if self.is_moving:
+                self.imagen = frame_set[self.frame_actual]
+            else:
+                self.imagen = frame_set[0]  # Frame estático si no se mueve
+        else:
+            self.imagen = frame_set
 
     def aplicar_reputacion(self, delta):
         self.reputacion = max(0.0, min(100.0, self.reputacion + delta))
@@ -79,13 +107,8 @@ class Repartidor:
         if not (0 <= next_tile_x < city_map.width and 0 <= next_tile_y < city_map.height):
             return
 
-        next_rect_check = pygame.Rect(
-            next_tile_x * self.tile_size,
-            next_tile_y * self.tile_size,
-            self.tile_size,
-            self.tile_size
-        )
-        if next_rect_check.collidelist(colliders) != -1:
+        next_tile_type = city_map.tiles[next_tile_y][next_tile_x].type
+        if next_tile_type.blocked:
             return
 
         # ===== Fórmula de velocidad con clima =====
@@ -108,18 +131,29 @@ class Repartidor:
         self.is_moving = True
         self.movimiento_iniciado = True
 
-        # Actualizar dirección
-        if dx > 0: self.direccion = "derecha"
-        elif dx < 0: self.direccion = "izquierda"
-        elif dy > 0: self.direccion = "abajo"
-        elif dy < 0: self.direccion = "arriba"
-        self.imagen = self.sprites[self.direccion]
+        # Actualizar dirección y la imagen correspondiente
+        if dx > 0:
+            self.direccion = "derecha"
+        elif dx < 0:
+            self.direccion = "izquierda"
+        elif dy > 0:
+            self.direccion = "abajo"
+        elif dy < 0:
+            self.direccion = "arriba"
+        self.actualizar_imagen()
 
     def update(self, dt, clima, en_parque):
+        if self.es_animado and self.is_moving:
+            self.anim_timer += dt
+            if self.anim_timer > 0.15:
+                self.anim_timer = 0
+                self.frame_actual = (self.frame_actual + 1) % 4
+                self.actualizar_imagen()
+
         if self.is_moving:
             if self.movimiento_iniciado:
                 consumo = 0.5 + (0.2 * (self.inventario.peso_total - 3.0) if self.inventario.peso_total > 3.0 else 0)
-                consumo += clima.obtener_extra_resistencia()  # <-- clima aumenta consumo
+                consumo += clima.obtener_extra_resistencia()
                 self.resistencia -= consumo
                 self.movimiento_iniciado = False
 
@@ -134,6 +168,7 @@ class Repartidor:
                 self.is_moving = False
                 self.tile_x = int(self.px // self.tile_size)
                 self.tile_y = int(self.py // self.tile_size)
+                self.actualizar_imagen()
             else:
                 self.px += (dx / distance) * move_dist
                 self.py += (dy / distance) * move_dist
@@ -152,18 +187,15 @@ class Repartidor:
 
         self.resistencia = min(100.0, max(0.0, self.resistencia))
 
-
     def __getstate__(self):
-        """Prepara el estado para ser guardado (excluye superficies de Pygame)."""
         state = self.__dict__.copy()
-        # Eliminamos los atributos que no se pueden guardar
-        del state['sprites']
-        del state['imagen']
-        del state['rect']
+        if 'sprites' in state: del state['sprites']
+        if 'imagen' in state: del state['imagen']
+        if 'rect' in state: del state['rect']
         return state
 
     def __setstate__(self, state):
-        """Restaura el estado después de cargar (y reinicializa lo excluido)."""
         self.__dict__.update(state)
-        # Volvemos a cargar las imágenes y crear el rect
-        self.inicializar_sprites()
+        # Determinar qué sprites cargar al recuperar el estado
+        ruta = "assets/player2.png" if "ia" in self.__class__.__name__.lower() else "assets.bicycle_down.png"
+        self.inicializar_sprites(ruta_base=ruta)

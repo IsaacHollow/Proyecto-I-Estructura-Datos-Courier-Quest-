@@ -3,13 +3,12 @@ import pygame.freetype
 
 
 class PantallaModoJuego:
-    def __init__(self, pantalla, ancho=800, alto=600, onJugarSolo=None, onJugarIA=None):
+    def __init__(self, pantalla, ancho=800, alto=600, onJugarIA=None, onVolver=None):
         self.pantalla = pantalla
         self.ancho = ancho
         self.alto = alto
-        self.onJugarSolo = onJugarSolo
         self.onJugarIA = onJugarIA
-        self.mostrar_dificultades = False
+        self.onVolver = onVolver
 
         pygame.font.init()
         self.font_titulo = pygame.freetype.SysFont(None, 52)
@@ -21,19 +20,7 @@ class PantallaModoJuego:
         self.color_volver = (200, 40, 40)
         self.color_volver_hover = (230, 60, 60)
 
-        self.botones_principales = self.crear_botones_principales()
         self.botones_dificultad = self.crear_botones_dificultad()
-
-    def crear_botones_principales(self):
-        w, h = 260, 60
-        y_center = self.alto // 2
-
-        btn_ia = pygame.Rect(0, 0, w, h)
-        btn_ia.center = (self.ancho // 2, y_center - 50)
-
-        return [
-            {"rect": btn_ia,   "texto": "Jugar vs IA", "accion": "ia"}
-        ]
 
     def crear_botones_dificultad(self):
         w, h = 240, 55
@@ -42,15 +29,13 @@ class PantallaModoJuego:
         sep = 75
 
         btns = []
-        dificultades = ["Fácil", "Medio", "Difícil"]
-        acciones = ["facil", "medio", "dificil"]
+        dificultades = [("Fácil", "facil"), ("Medio", "medio"), ("Difícil", "dificil")]
 
-        for i, txt in enumerate(dificultades):
+        for i, (texto, accion) in enumerate(dificultades):
             r = pygame.Rect(0, 0, w, h)
             r.center = (cx, start_y + i * sep)
-            btns.append({"rect": r, "texto": txt, "accion": acciones[i]})
+            btns.append({"rect": r, "texto": texto, "accion": accion})
 
-        # Botón Volver abajo a la derecha
         volver = pygame.Rect(self.ancho - 150, self.alto - 70, 130, 50)
         btns.append({"rect": volver, "texto": "Volver", "accion": "volver"})
 
@@ -59,39 +44,22 @@ class PantallaModoJuego:
     def manejar_evento(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
-
-            # Pantalla inicial
-            if not self.mostrar_dificultades:
-                for b in self.botones_principales:
-                    if b["rect"].collidepoint(pos):
-                        if b["accion"] == "ia":
-                            self.mostrar_dificultades = True
-
-            else:
-                for b in self.botones_dificultad:
-                    if b["rect"].collidepoint(pos):
-                        if b["accion"] == "volver":
-                            self.mostrar_dificultades = False
-                        else:
-                            # Llamar al juego con la dificultad seleccionada
-                            if callable(self.onJugarIA):
-                                self.onJugarIA(b["accion"])
+            for b in self.botones_dificultad:
+                if b["rect"].collidepoint(pos):
+                    if b["accion"] == "volver":
+                        if callable(self.onVolver):
+                            self.onVolver()
+                    else:
+                        if callable(self.onJugarIA):
+                            self.onJugarIA(b["accion"])
 
     def dibujar(self):
         self.pantalla.fill(self.color_fondo)
+        self.font_titulo.render_to(self.pantalla, (self.ancho//2 - 250, 80),
+                                   "Selecciona Dificultad", self.color_texto)
 
-        if not self.mostrar_dificultades:
-            for b in self.botones_principales:
-                self.dibujar_boton(b["rect"], b["texto"])
-        else:
-            self.font_titulo.render_to(self.pantalla, (self.ancho//2 - 250, 80),
-                                       "Selecciona dificultad", self.color_texto)
-
-            for b in self.botones_dificultad:
-                if b["accion"] == "volver":
-                    self.dibujar_boton(b["rect"], b["texto"], rojo=True)
-                else:
-                    self.dibujar_boton(b["rect"], b["texto"])
+        for b in self.botones_dificultad:
+            self.dibujar_boton(b["rect"], b["texto"], rojo=(b["accion"] == "volver"))
 
     def dibujar_boton(self, rect, texto, rojo=False):
         mouse = pygame.mouse.get_pos()

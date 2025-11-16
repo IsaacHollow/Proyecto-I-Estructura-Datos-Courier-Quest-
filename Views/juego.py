@@ -24,11 +24,13 @@ PEDIDO_SIZE = 20
 
 
 class JuegoView:
-    def __init__(self, pantalla, onJugar, city_map=None, pedidos_disponibles=None, estado_cargado=None):
+    def __init__(self, pantalla, onJugar, city_map=None, pedidos_disponibles=None, estado_cargado=None,
+                 dificultad_cpu: str = "facil"):
         self.pantalla = pantalla
         self.pedidos_disponibles = pedidos_disponibles
         self.onJugar = onJugar
         self.save_manager = SaveManager()
+        self.dificultad_cpu = dificultad_cpu
 
         if estado_cargado:
             # --- Cargar desde un estado ---
@@ -37,7 +39,9 @@ class JuegoView:
             self.tiempo_juego = estado_cargado.tiempo_juego
             self.repartidor = estado_cargado.repartidor
             self.weather = estado_cargado.weather
-            # Guardamos la lista original para poder crear un nuevo estado de guardado
+            start_tile_x_cpu = self.city_map.width // 2 + 1
+            start_tile_y_cpu = self.city_map.height // 2
+            self.repartidor_ia = RepartidorIA(start_tile_x_cpu, start_tile_y_cpu, TILE_WIDTH, self.dificultad_cpu)
             self._pedidos_iniciales_sesion = estado_cargado.pedidos_iniciales
         else:
             # --- Iniciar una nueva partida ---
@@ -46,24 +50,26 @@ class JuegoView:
 
             self.city_map = city_map
             self.pedidos_disponibles = pedidos_disponibles
-            # Guardamos una copia de la lista original de pedidos para la sesión
             self._pedidos_iniciales_sesion = list(pedidos_disponibles)
             self.tiempo_juego = 0.0
+
+            # Jugador Humano
             start_tile_x = self.city_map.width // 2
             start_tile_y = self.city_map.height // 2
             self.repartidor = Repartidor(start_tile_x, start_tile_y, TILE_WIDTH)
+
+            # Jugador IA
+            start_tile_x_cpu = self.city_map.width // 2 + 1
+            start_tile_y_cpu = self.city_map.height // 2
+            self.repartidor_ia = RepartidorIA(start_tile_x_cpu, start_tile_y_cpu, TILE_WIDTH, self.dificultad_cpu)
+
             self.weather = Weather()
 
         self.score_manager = ScoreManager()
-
-        # Meta de puntaje y tiempo límite
         self.goal_income = getattr(self.city_map, "goal")
         self.time_limit = getattr(self.city_map, "max_time")
-
-        # Flag para evitar múltiples transiciones de pantalla al finalizar
         self._fin_juego_iniciado = False
 
-        # Estados UI / juego
         self.mostrando_inventario = False
         self.vista_inventario = "normal"
 
@@ -83,10 +89,8 @@ class JuegoView:
         self.building_rects = []
         for y, row in enumerate(self.city_map.tiles):
             for x, tile in enumerate(row):
-                if tile.type.name == "edificio":
-                    px = x * TILE_WIDTH
-                    py = y * TILE_HEIGHT
-                    self.building_rects.append(pygame.Rect(px, py, TILE_WIDTH, TILE_HEIGHT))
+                if tile.type.blocked:
+                    self.building_rects.append(pygame.Rect(x * TILE_WIDTH, y * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT))
 
         self.font = pygame.font.Font(None, 24)
         self.inventory_font = pygame.font.SysFont("monospace", 16)
@@ -98,11 +102,6 @@ class JuegoView:
             {"texto": "Por Deadline", "accion": "deadline", "rect": pygame.Rect(0, 0, 120, 30), "hover": False},
         ]
 
-        start_tile_x = self.city_map.width // 2 + 1  # solo para que no esté encima
-        start_tile_y = self.city_map.height // 2
-        self.repartidor_ia = RepartidorIA(start_tile_x, start_tile_y, TILE_WIDTH)
-
-
     def manejarEvento(self, event):
         if self.mostrando_inventario:
             if event.type == pygame.KEYDOWN:
@@ -113,7 +112,6 @@ class JuegoView:
                     self.repartidor.inventario.siguiente(lista_ordenada)
                 elif event.key in (pygame.K_LCTRL, pygame.K_RCTRL, pygame.K_ESCAPE):
                     self.mostrando_inventario = False
-
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for boton in self.botones_inventario:
                     if boton["rect"].collidepoint(event.pos):
@@ -122,12 +120,9 @@ class JuegoView:
             return
 
         if event.type == pygame.KEYDOWN:
-            # con F5 guardamos en el slot 1
             if event.key == pygame.K_F5:
                 self.guardar_estado_actual(1)
                 print("¡Partida guardada!")
-
-        if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_z:
                 self.intentar_interaccion()
             elif event.key in (pygame.K_LCTRL, pygame.K_RCTRL):
@@ -135,12 +130,11 @@ class JuegoView:
                 if self.mostrando_inventario:
                     self.vista_inventario = "normal"
 
-
-    def dibujar(self, offset_x=10, offset_y=10):
+    def dibujar(self):
         self.pantalla.fill((0, 0, 0))
         self.camera.center_on(self.repartidor.rect)
 
-        # Dibujar el mapa
+        # Dibujar mapa
         for y, row in enumerate(self.city_map.tiles):
             for x, tile in enumerate(row):
                 sprite = self.sprites.get(tile.type.name)
@@ -153,131 +147,116 @@ class JuegoView:
         for pedido in self.pedidos_disponibles:
             if self.tiempo_juego < pedido.release_time:
                 continue
-
             if not hasattr(pedido, "imagen") or pedido.imagen is None:
                 pedido.cargar_sprite((PEDIDO_SIZE, PEDIDO_SIZE))
 
             offset_paquete = (TILE_WIDTH - PEDIDO_SIZE) // 2
-            if pedido.status == "pendiente":
+            holder = getattr(pedido, 'holder', None)
+
+            if pedido.status == "pendiente" and holder is None:
                 px = pedido.pickup[0] * TILE_WIDTH + offset_paquete
                 py = pedido.pickup[1] * TILE_HEIGHT + offset_paquete
-                screen_x, screen_y = self.camera.apply((px, py))
-                self.pantalla.blit(pedido.imagen, (screen_x, screen_y))
-            elif pedido.status == "en curso" and self.repartidor.inventario.actual() == pedido:
-                px = pedido.dropoff[0] * TILE_WIDTH + offset_paquete
-                py = pedido.dropoff[1] * TILE_HEIGHT + offset_paquete
-                screen_x, screen_y = self.camera.apply((px, py))
-                self.pantalla.blit(pedido.imagen, (screen_x, screen_y))
+                sx, sy = self.camera.apply((px, py))
+                self.pantalla.blit(pedido.imagen, (sx, sy))
+            elif pedido.status == "en curso":
+                if holder == 'human' and self.repartidor.inventario.actual() == pedido:
+                    px = pedido.dropoff[0] * TILE_WIDTH + offset_paquete
+                    py = pedido.dropoff[1] * TILE_HEIGHT + offset_paquete
+                    sx, sy = self.camera.apply((px, py))
+                    self.pantalla.blit(pedido.imagen, (sx, sy))
 
-        # Dibujar personajes
-        self.repartidor_ia.actualizar_animacion(1 / 60)
-        self.repartidor_ia.dibujar(self.pantalla, self.camera)
+        # Dibujar repartidores
+        for repartidor_obj in [self.repartidor, self.repartidor_ia]:
+            if repartidor_obj.imagen:
+                sx, sy = self.camera.apply(repartidor_obj.rect.topleft)
+                self.pantalla.blit(repartidor_obj.imagen, (sx, sy))
 
-        screen_x, screen_y = self.camera.apply(self.repartidor.rect.topleft)
-        self.pantalla.blit(self.repartidor.imagen, (screen_x, screen_y))
-
-        # Dibujar UI
-        self.dibujar_ui(offset_x, offset_y)
+        self.dibujar_ui()
 
         if self.mostrando_inventario:
             self.dibujar_inventario_overlay()
 
-    def dibujar_ui(self, offset_x, offset_y):
-
-        barra_ancho = 100
-        barra_alto = 10
-        resistencia_ratio = self.repartidor.resistencia / 100
-        pygame.draw.rect(self.pantalla, RED, (offset_x, offset_y, barra_ancho, barra_alto))
-        pygame.draw.rect(self.pantalla, GREEN, (offset_x, offset_y, barra_ancho * resistencia_ratio, barra_alto))
-
-        # Clima
-        estado_clima, _ = self.weather.obtener_estado_y_intensidad()
-        texto_clima = f"Clima: {estado_clima}"
-        self.pantalla.blit(self.font.render(texto_clima, True, WHITE), (offset_x, offset_y + 15))
-
-        # Puntaje
-        texto_puntaje = f"Ganancia: {self.repartidor.puntaje}"
-        self.pantalla.blit(self.font.render(texto_puntaje, True, YELLOW), (offset_x, offset_y + 35))
-
-        # --- Barra de reputación ---
-        rep_bar_width = 100
-        rep_bar_height = 10
+    def dibujar_ui(self):
+        offset_x = 10
+        offset_y = 10
         screen_w, _ = self.pantalla.get_size()
-        rep_ratio = self.repartidor.reputacion / 100
-        bar_x = screen_w - rep_bar_width - 20
-        bar_y = 20
 
-        pygame.draw.rect(self.pantalla, (100, 100, 100), (bar_x, bar_y, rep_bar_width, rep_bar_height))
-        pygame.draw.rect(self.pantalla, YELLOW, (bar_x, bar_y, rep_bar_width * rep_ratio, rep_bar_height))
+        # --- UI Jugador Humano ---
+        barra_ancho, barra_alto = 100, 10
+        res_ratio_h = self.repartidor.resistencia / 100
+        pygame.draw.rect(self.pantalla, RED, (offset_x, offset_y, barra_ancho, barra_alto))
+        pygame.draw.rect(self.pantalla, GREEN, (offset_x, offset_y, barra_ancho * res_ratio_h, barra_alto))
+        self.pantalla.blit(self.font.render(f"Jugador", True, WHITE), (offset_x, offset_y + 15))
 
-        texto_rep = f"{int(self.repartidor.reputacion)}/100"
-        text_surface = self.font.render(texto_rep, True, WHITE)
-        text_rect = text_surface.get_rect(center=(bar_x + rep_bar_width // 2, bar_y + rep_bar_height + 12))
-        self.pantalla.blit(text_surface, text_rect)
+        rep_ratio_h = self.repartidor.reputacion / 100
+        bar_x_h = screen_w - barra_ancho - 20
+        pygame.draw.rect(self.pantalla, (80, 80, 80), (bar_x_h, offset_y, barra_ancho, barra_alto))
+        pygame.draw.rect(self.pantalla, YELLOW, (bar_x_h, offset_y, barra_ancho * rep_ratio_h, barra_alto))
+        self.pantalla.blit(self.font.render(f"Rep: {int(self.repartidor.reputacion)}", True, WHITE),
+                           (bar_x_h, offset_y + 15))
 
-        # --- Cronómetro y meta ---
+        # --- UI Jugador CPU ---
+        y_cpu = offset_y + 50
+        res_ratio_c = self.repartidor_ia.resistencia / 100
+        pygame.draw.rect(self.pantalla, RED, (offset_x, y_cpu, barra_ancho, barra_alto))
+        pygame.draw.rect(self.pantalla, BLUE, (offset_x, y_cpu, barra_ancho * res_ratio_c, barra_alto))
+        self.pantalla.blit(self.font.render(f"CPU ({self.dificultad_cpu})", True, WHITE), (offset_x, y_cpu + 15))
+
+        rep_ratio_c = self.repartidor_ia.reputacion / 100
+        bar_x_c = screen_w - barra_ancho - 20
+        pygame.draw.rect(self.pantalla, (80, 80, 80), (bar_x_c, y_cpu, barra_ancho, barra_alto))
+        pygame.draw.rect(self.pantalla, (120, 180, 255), (bar_x_c, y_cpu, barra_ancho * rep_ratio_c, barra_alto))
+        self.pantalla.blit(self.font.render(f"Rep: {int(self.repartidor_ia.reputacion)}", True, WHITE),
+                           (bar_x_c, y_cpu + 15))
+
+        # Puntajes
+        self.pantalla.blit(self.font.render(f"Ganancia J: {self.repartidor.puntaje}", True, YELLOW),
+                           (offset_x, offset_y + 95))
+        self.pantalla.blit(self.font.render(f"Ganancia C: {self.repartidor_ia.puntaje}", True, (150, 200, 255)),
+                           (offset_x, offset_y + 120))
+
+        # Info General
         tiempo_restante = max(0, self.time_limit - self.tiempo_juego)
-        minutos = int(tiempo_restante // 60)
-        segundos = int(tiempo_restante % 60)
-        texto_tiempo = f"Tiempo: {minutos:02d}:{segundos:02d}"
+        minutos, segundos = divmod(int(tiempo_restante), 60)
+        self.pantalla.blit(self.font.render(f"Tiempo: {minutos:02d}:{segundos:02d}", True, WHITE),
+                           (screen_w / 2 - 70, 10))
+        self.pantalla.blit(self.font.render(f"Meta: {self.goal_income}", True, YELLOW), (screen_w / 2 - 70, 35))
 
-        texto_meta = f"Meta: {self.goal_income}"
+        estado_clima, _ = self.weather.obtener_estado_y_intensidad()
+        self.pantalla.blit(self.font.render(f"Clima: {estado_clima}", True, WHITE), (screen_w / 2 - 70, 60))
 
-        self.pantalla.blit(self.font.render(texto_tiempo, True, WHITE), (bar_x, bar_y + 35))
-        self.pantalla.blit(self.font.render(texto_meta, True, YELLOW), (bar_x, bar_y + 55))
+        # Indicaciones
+        self.pantalla.blit(self.font.render("Ctrl: Inventario | Z: Interactuar | F5: Guardar", True, WHITE),
+                           (10, self.pantalla.get_height() - 30))
 
+        self.dibujar_overlay_clima()
 
-        # --- Texto inventario ---
-        screen_w, screen_h = self.pantalla.get_size()
-        texto_inv = "Presiona Ctrl para ver el inventario"
-        text_surf = self.font.render(texto_inv, True, WHITE)
-        text_rect = text_surf.get_rect(center=(screen_w / 4.5, screen_h - 20))
-        self.pantalla.blit(text_surf, text_rect)
-
-        texto_guardado = "Presiona F5 para guardar la partida"
-        text_surf = self.font.render(texto_guardado, True, WHITE)
-        text_rect = text_surf.get_rect(center=(screen_w / 1.3, screen_h - 20))
-        self.pantalla.blit(text_surf, text_rect)
-
+    def dibujar_overlay_clima(self):
         color_overlay = None
-
         if self.weather.estado_actual == "clear":
             color_overlay = (255, 240, 180, int(60 * self.weather.intensidad))
-
         elif self.weather.estado_actual == "sunny":
             color_overlay = (255, 200, 120, int(70 * self.weather.intensidad))
-
         elif self.weather.estado_actual == "clouds":
             color_overlay = (220, 220, 220, int(50 * self.weather.intensidad))
-
         elif self.weather.estado_actual == "rain_light":
             color_overlay = (150, 180, 255, int(50 * self.weather.intensidad))
-
         elif self.weather.estado_actual == "rain":
             color_overlay = (100, 120, 200, int(70 * self.weather.intensidad))
-
         elif self.weather.estado_actual == "storm":
             color_overlay = (40, 50, 90, int(100 * self.weather.intensidad))
-
         elif self.weather.estado_actual == "fog":
             color_overlay = (200, 200, 200, int(60 * self.weather.intensidad))
 
         if color_overlay:
-            overlay = pygame.Surface((self.pantalla.get_width(), self.pantalla.get_height()), pygame.SRCALPHA)
+            overlay = pygame.Surface(self.pantalla.get_size(), pygame.SRCALPHA)
             overlay.fill(color_overlay)
             self.pantalla.blit(overlay, (0, 0))
-
-        if color_overlay:
-            overlay = pygame.Surface((self.pantalla.get_width(), self.pantalla.get_height()), pygame.SRCALPHA)
-            overlay.fill(color_overlay)
-            self.pantalla.blit(overlay, (0, 0))
-
 
     def dibujar_inventario_overlay(self):
         overlay_w, overlay_h = 600, 400
         x_overlay = (self.pantalla.get_width() - overlay_w) // 2
         y_overlay = (self.pantalla.get_height() - overlay_h) // 2
-
         overlay = pygame.Surface((overlay_w, overlay_h), pygame.SRCALPHA)
         overlay.fill((10, 20, 40, 210))
         self.pantalla.blit(overlay, (x_overlay, y_overlay))
@@ -285,8 +264,7 @@ class JuegoView:
 
         y_offset = y_overlay + padding
         self.pantalla.blit(self.font.render("Inventario", True, WHITE), (x_overlay + padding, y_offset))
-        ayuda_texto = "Usa w/s para navegar"
-        ayuda_surf = self.font.render(ayuda_texto, True, YELLOW)
+        ayuda_surf = self.font.render("Usa w/s para navegar", True, YELLOW)
         self.pantalla.blit(ayuda_surf, ayuda_surf.get_rect(topright=(x_overlay + overlay_w - padding, y_offset)))
         y_offset += 30
 
@@ -321,26 +299,18 @@ class JuegoView:
 
                 tiempo_restante = pedido.deadline - self.tiempo_juego
                 color_texto = GREEN if tiempo_restante > 60 else YELLOW if tiempo_restante > 30 else RED
-
                 seconds = int(tiempo_restante)
                 sign = "-" if seconds < 0 else ""
                 seconds = abs(seconds)
                 m, s = divmod(seconds, 60)
                 h, m = divmod(m, 60)
                 deadline_str = f"{sign}{h}:{m:02d}:{s:02d}" if h > 0 else f"{sign}{m:02d}:{s:02d}"
-
                 release_str = str(timedelta(seconds=int(pedido.release_time)))
-
-                datos_fila = {
-                    "ID": pedido.id, "Prio": str(pedido.priority), "Peso": f"{pedido.weight:.2f}",
-                    "Deadline": deadline_str, "Release": release_str
-                }
-
+                datos_fila = {"ID": pedido.id, "Prio": str(pedido.priority), "Peso": f"{pedido.weight:.2f}",
+                              "Deadline": deadline_str, "Release": release_str}
                 for texto_col, offset_x in columnas.items():
-                    dato = datos_fila[texto_col]
-                    self.pantalla.blit(self.inventory_font.render(dato, True, color_texto),
+                    self.pantalla.blit(self.inventory_font.render(datos_fila[texto_col], True, color_texto),
                                        (base_x + offset_x, y_offset))
-
                 y_offset += 20
 
     def estan_adyacentes(self, pos1, pos2):
@@ -354,176 +324,132 @@ class JuegoView:
             if self.tiempo_juego < pedido.release_time:
                 continue
 
-            if pedido.status == "pendiente" and self.estan_adyacentes(pos_repartidor, pedido.pickup):
+            holder = getattr(pedido, 'holder', None)
+
+            # Recoger pedido
+            if pedido.status == "pendiente" and holder is None and self.estan_adyacentes(pos_repartidor, pedido.pickup):
                 if self.repartidor.inventario.agregar_pedido(pedido):
                     pedido.status = "en curso"
+                    pedido.holder = "human"
                     pedido.cargar_sprite((PEDIDO_SIZE, PEDIDO_SIZE))
-                    print(f"Pedido {pedido.id} recogido")
+                    print(f"Pedido {pedido.id} recogido por el jugador")
                     return
-
-            elif pedido.status == "en curso" and self.estan_adyacentes(pos_repartidor, pedido.dropoff):
+            # Entregar pedido
+            elif pedido.status == "en curso" and holder == "human" and self.estan_adyacentes(pos_repartidor,
+                                                                                             pedido.dropoff):
                 if self.repartidor.inventario.entregar_pedido(pedido):
                     pedido.status = "entregado"
-
-                    pago_base = pedido.payout
-                    pago_final = pago_base
-
-                    # Bonificación por entrega rápida
-                    tiempo_restante = pedido.deadline - self.tiempo_juego
-                    ventana_de_tiempo = pedido.deadline - pedido.release_time
-
-                    bonificacion_tiempo = 0
-                    if ventana_de_tiempo > 0 and tiempo_restante > 0:
-                        # Si entrega usando menos del 50% del tiempo disponible se da +20% bonus
-                        if (tiempo_restante / ventana_de_tiempo) >= 0.5:
-                            bonificacion_tiempo = pago_base * 0.20
-                        # Si entrega usando menos del 80% del tiempo disponible se da +10% bonus
-                        elif (tiempo_restante / ventana_de_tiempo) >= 0.2:
-                            bonificacion_tiempo = pago_base * 0.10
-
-                    pago_final += bonificacion_tiempo
-
-                    # Bonificación por reputación alta
-                    multiplicador_reputacion = self.repartidor.obtener_multiplicador_pago()  # +5% si rep >= 90
-                    pago_final *= multiplicador_reputacion
-
-                    # Asignar el puntaje final al repartidor
-                    self.repartidor.puntaje += int(pago_final)
-
-                    delta_rep = 0
-                    if tiempo_restante >= 0.2 * (pedido.deadline - pedido.release_time):
-                        delta_rep = 5
-                    elif tiempo_restante >= 0:
-                        delta_rep = 3
-                    else:
-                        atraso = -tiempo_restante
-                        if atraso <= 30:
-                            delta_rep = -2
-                        elif atraso <= 120:
-                            delta_rep = -5
-                        else:
-                            delta_rep = -10
-                    baja_critica = self.repartidor.aplicar_reputacion(delta_rep)
-                    if delta_rep >= 0:
-                        self.repartidor.racha_sin_penalizacion += 1
-                        if self.repartidor.racha_sin_penalizacion == 3:
-                            self.repartidor.aplicar_reputacion(2)
-                            self.repartidor.racha_sin_penalizacion = 0
-                    else:
-                        self.repartidor.racha_sin_penalizacion = 0
-                    if baja_critica:
-                        pygame.mixer.music.stop()
-                        if not self._fin_juego_iniciado:
-                            self._fin_juego_iniciado = True
-                            self.onJugar("derrota", puntaje=self.repartidor.puntaje)
-                        return
-                    # comprobar victoria inmediata al entregar
-                    if self.repartidor.puntaje >= self.goal_income:
-                        pygame.mixer.music.stop()
-                        if not self._fin_juego_iniciado:
-                            self._fin_juego_iniciado = True
-                            self.onJugar("victoria", puntaje=self.repartidor.puntaje)
-                        return
-                    print(f"Pedido {pedido.id} entregado")
+                    self.procesar_pago_y_reputacion(self.repartidor, pedido)
+                    print(f"Pedido {pedido.id} entregado por el jugador")
                     return
 
+    def procesar_pago_y_reputacion(self, repartidor_obj, pedido):
+        pago_base = pedido.payout
+        tiempo_restante = pedido.deadline - self.tiempo_juego
+        ventana_tiempo = pedido.deadline - pedido.release_time
+
+        bonificacion = 0
+        if ventana_tiempo > 0 and tiempo_restante > 0:
+            ratio = tiempo_restante / ventana_tiempo
+            if ratio >= 0.5:
+                bonificacion = pago_base * 0.20
+            elif ratio >= 0.2:
+                bonificacion = pago_base * 0.10
+
+        pago_final = (pago_base + bonificacion) * repartidor_obj.obtener_multiplicador_pago()
+        repartidor_obj.puntaje += int(pago_final)
+
+        delta_rep = 0
+        if ventana_tiempo > 0 and tiempo_restante >= 0.2 * ventana_tiempo:
+            delta_rep = 5
+        elif tiempo_restante >= 0:
+            delta_rep = 3
+        else:
+            atraso = -tiempo_restante
+            if atraso <= 30:
+                delta_rep = -2
+            elif atraso <= 120:
+                delta_rep = -5
+            else:
+                delta_rep = -10
+
+        baja_critica = repartidor_obj.aplicar_reputacion(delta_rep)
+
+        if repartidor_obj is self.repartidor:
+            if baja_critica and not self._fin_juego_iniciado:
+                self._fin_juego_iniciado = True
+                self.onJugar("derrota", puntaje=self.repartidor.puntaje)
+            elif self.repartidor.puntaje >= self.goal_income and not self._fin_juego_iniciado:
+                self._fin_juego_iniciado = True
+                self.onJugar("victoria", puntaje=self.repartidor.puntaje)
+
     def actualizar(self, dt):
-
-        # Actualiza el jugador IA: decide movimiento, se mueve y anima
-        self.repartidor_ia.decidir_movimiento(self.pedidos_disponibles, self.city_map, self.weather)
-        self.repartidor_ia.mover(self.building_rects,
-                                 self.city_map.width * TILE_WIDTH,
-                                 self.city_map.height * TILE_HEIGHT)
-        self.repartidor_ia.actualizar_animacion(dt)
-
-        # Contador de tiempo de juego
         self.tiempo_juego += dt
+        self.weather.actualizar(dt)
 
-        # Actualiza botones inventario si está abierto
         if self.mostrando_inventario:
             mpos = pygame.mouse.get_pos()
             for boton in self.botones_inventario:
                 boton["hover"] = boton["rect"].collidepoint(mpos)
-
-        # Movimiento del repartidor humano
-        if not self.repartidor.is_moving and not self.mostrando_inventario:
+        else:
             keys = pygame.key.get_pressed()
-            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-                self.repartidor.start_move(-1, 0, self.city_map, self.building_rects, self.weather)
-            elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-                self.repartidor.start_move(1, 0, self.city_map, self.building_rects, self.weather)
-            elif keys[pygame.K_UP] or keys[pygame.K_w]:
-                self.repartidor.start_move(0, -1, self.city_map, self.building_rects, self.weather)
-            elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
-                self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
+            if not self.repartidor.is_moving:
+                if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+                    self.repartidor.start_move(-1, 0, self.city_map, self.building_rects, self.weather)
+                elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+                    self.repartidor.start_move(1, 0, self.city_map, self.building_rects, self.weather)
+                elif keys[pygame.K_UP] or keys[pygame.K_w]:
+                    self.repartidor.start_move(0, -1, self.city_map, self.building_rects, self.weather)
+                elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
+                    self.repartidor.start_move(0, 1, self.city_map, self.building_rects, self.weather)
 
-        # Actualiza clima
-        self.weather.actualizar(dt)
+        # Lógica y actualización del repartidor IA
+        self.repartidor_ia.actualizar_logica_ia(dt, self.city_map, self.building_rects, self.weather)
+        tile_ia = self.city_map.tiles[self.repartidor_ia.tile_y][self.repartidor_ia.tile_x]
+        en_parque_ia = tile_ia.type.name == "parque"
+        self.repartidor_ia.update(dt, self.weather, en_parque_ia)
 
-        # Detectar si el jugador está en parque
-        tile_actual = self.city_map.tiles[self.repartidor.tile_y][self.repartidor.tile_x]
-        en_parque = tile_actual.type.name == "parque"
+        # Actualización del repartidor humano
+        tile_humano = self.city_map.tiles[self.repartidor.tile_y][self.repartidor.tile_x]
+        en_parque_humano = tile_humano.type.name == "parque"
+        self.repartidor.update(dt, self.weather, en_parque_humano)
 
-        # Actualiza lógica del jugador humano
-        self.repartidor.update(dt, self.weather, en_parque)
-
-        # Comprueba si se ha terminado el juego
         self.comprobar_fin_juego()
 
     def comprobar_fin_juego(self):
-        if self._fin_juego_iniciado:
-            return
+        if self._fin_juego_iniciado: return
 
         partida_terminada = False
         if self.time_limit > 0 and self.tiempo_juego > self.time_limit:
-            print("Fin del juego: Se acabó el tiempo.")
             partida_terminada = True
         elif self.repartidor.reputacion < 20:
-            print("Fin del juego: Reputación demasiado baja.")
             partida_terminada = True
         elif all(p.status == "entregado" for p in self.pedidos_disponibles):
-            print("Fin del juego: Todos los paquetes han sido entregados.")
             partida_terminada = True
 
         if partida_terminada:
             self._fin_juego_iniciado = True
             pygame.mixer.music.stop()
-
             puntaje_final = self.calcular_puntaje_final()
 
             if puntaje_final >= self.goal_income:
-                print(f"¡Victoria! Puntaje final: {puntaje_final} (Meta: {self.goal_income})")
                 self.score_manager.agregar_puntaje(puntaje_final, "victoria")
                 self.onJugar("victoria", puntaje=puntaje_final)
             else:
-                print(f"Derrota. Puntaje final: {puntaje_final} (Meta: {self.goal_income})")
                 self.score_manager.agregar_puntaje(puntaje_final, "derrota")
                 self.onJugar("derrota", puntaje=puntaje_final)
 
     def calcular_puntaje_final(self):
-        #Puntaje base es el acumulado durante el juego.
         score_base = self.repartidor.puntaje
-
-        #Multiplicador por reputacion
         pay_mult = self.repartidor.obtener_multiplicador_pago()
         score_con_bonus_rep = score_base * pay_mult
-
-        #Calcular bonificación por tiempo.
         score_final = score_con_bonus_rep
         if self.time_limit > 0 and self.tiempo_juego < (self.time_limit * 0.8):
-            bonus_tiempo = score_con_bonus_rep * 0.10  # 10% de bonus por terminar rápido
-            score_final += bonus_tiempo
-
-        #Penalización por reputación baja
+            score_final += score_con_bonus_rep * 0.10
         if self.repartidor.reputacion < 50:
-            # Se aplica un factor de reducción progresivo si la reputación es baja
             reputacion_factor = max(0.5, self.repartidor.reputacion / 100)
             score_final *= reputacion_factor
-
         return int(score_final)
-
-    def calcular_puntaje(self):
-        return self.repartidor.puntaje
 
     def guardar_estado_actual(self, slot: int):
         estado = EstadoJuego(
