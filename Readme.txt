@@ -1,5 +1,6 @@
 # Proyecto-I-Estructura-Datos-Courier-Quest-
 # Courier Quest — EIF-207 (Ciclo II, 2025)
+# Courier Quest II (Apartir de la liena 295)
 
 Deben	 incluir	 un	 archivo	 README.md	 con	 información	 general	 del	 proyecto,	
 incluyendo	las	estructuras	de	datos	que	utilizaron	y	para	qué	partes	del	programa.	
@@ -285,10 +286,81 @@ Ordenamiento (insertion sort): O(n_vista²)
 - Tipo: Condicionales y all() sobre pedidos
 - Complejidad: O(p) para verificar si todos los pedidos fueron entregados
 - Impacto: Ligero; la función se ejecuta una vez por tick y termina rápido.
-___________________________________________________________________________________________________________
 
 
 # Fecha de entrega: 28 de septiembre de 2025
 # Nueva Fecha de entrega: 5 de octubre de 2025
+___________________________________________________________________________________________________________
+
+# Proyecto II
+
+## Clase "pahtfinding_A"
+Implementa el algoritmo de búsqueda A* para encontrar la ruta más corta entre dos posiciones del mapa.
+
+**Estructuras:**
+- Heapq como min-heap para la lista de nodos abiertos
+- dict para g_score, f_score_map y came_from
+- Tuplas (x, y) como claves hashables
+- Lista resultante para reconstrucción del camino
+
+**Algoritmos:**
+- A* con heurística Manhattan
+- Uso de priority queue para seleccionar el nodo más prometedor
+- Reconstrucción de ruta mediante backtracking
+
+**Complejidad:**
+- Tiempo: O(V log V) donde V = ancho × alto del mapa
+- Memoria: O(V)
+- Reconstrucción del camino: O(L) donde L es la longitud final de la ruta
+
+**Impacto:**
+- Muy eficiente para mapas medianos.
+- Escala bien gracias al heap; solo se vuelve costoso en mapas extremadamente grandes o si se ejecuta cada frame.
+
+## Clase "repartidor_IA"
+La clase RepartidorIA implementa 3 niveles de dificultad que combinan pathfinding, heurísticas y movimiento probabilístico.
+
+**Estructuras:**
+- Listas para rutas, posibles movimientos, pedidos válidos
+- Tuplas usadas para posiciones (x, y)
+- Diccionarios map score de A*
+- Strings para los estados internos de la IA
+
+**Algoritmos:**
+- A* para calcular rutas óptimas (recogida y entrega)
+- Algoritmo Greedy para seleccionar pedidos en dificultad media
+- Algoritmo heurístico de optimización en dificultad difícil
+- Movimiento aleatorio ponderado para IA fácil
+- Reconstrucción de ruta mediante lista FIFO
+
+**Complejidad:**
+- Fácil: O(1) por tick
+- Media: O(P × V log V)
+- Difícil: O(P × V log V) (con mayor carga)
+- Seguimiento de ruta: O(L)
+
+**Impacto en el juego:**
+- La IA fácil casi no consume recursos; la IA media y difícil realizan múltiples ejecuciones del algoritmo A*, por lo que el costo crece con el tamaño del mapa y el número de pedidos activos.
+
+## Clase "pantalla_jugar:"
+**Estructuras de datos:**
+- Listas de botones
+- Diccionarios para atributos
+- Rectángulos de pygame
+
+**Algoritmos:**
+- Recorrido lineal de botones
+- Detección de colisión punto-rectángulo
+- Renderizado iterativo
+
+**Complejidad:**
+- Por evento: O(n)
+- Por frame: O(n)
+(Excelente para una UI pequeña-mediana)
+
+**Impacto:**
+- Muy eficiente y fácil de mantener
+- Se adapta bien a pantallas de menú típicas
+
 
 # Fecha de entrega proyecto #2:  16 de noviembre 2025
