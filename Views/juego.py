@@ -69,7 +69,7 @@ class JuegoView:
             self.weather = Weather()
 
         self.score_manager = ScoreManager()
-        self.goal_income = 1200
+        self.goal_income = getattr(self.city_map, "goal", 1500)
         self.time_limit = getattr(self.city_map, "max_time", 0)
         self._fin_juego_iniciado = False
 
@@ -448,12 +448,39 @@ class JuegoView:
         self.comprobar_fin_juego()
 
     def comprobar_fin_juego(self):
-        if self._fin_juego_iniciado: return
+        if self._fin_juego_iniciado:
+            return
 
+        # Verificar si alguno de los dos jugadores alcanzó la meta
+        jugador_alcanzo_meta = self.repartidor.puntaje >= self.goal_income
+        ia_alcanzo_meta = self.repartidor_ia.puntaje >= self.goal_income
+
+        if jugador_alcanzo_meta or ia_alcanzo_meta:
+            self._fin_juego_iniciado = True
+            pygame.mixer.music.stop()
+
+            puntaje_jugador = self.calcular_puntaje_final()
+            puntaje_ia = self.repartidor_ia.puntaje
+
+            if jugador_alcanzo_meta and not ia_alcanzo_meta:
+                self.score_manager.agregar_puntaje(puntaje_jugador, "victoria")
+                self.onJugar("victoria", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
+
+            elif ia_alcanzo_meta and not jugador_alcanzo_meta:
+                self.score_manager.agregar_puntaje(puntaje_jugador, "derrota")
+                self.onJugar("derrota", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
+            else:
+                if puntaje_jugador >= puntaje_ia:
+                    self.score_manager.agregar_puntaje(puntaje_jugador, "victoria")
+                    self.onJugar("victoria", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
+                else:
+                    self.score_manager.agregar_puntaje(puntaje_jugador, "derrota")
+                    self.onJugar("derrota", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
+            return
+
+        # Si ninguno alcanzó la meta, se comparan puntuajes
         partida_terminada = False
-        if self.time_limit > 0 and self.tiempo_juego > self.time_limit:
-            partida_terminada = True
-        elif self.repartidor.reputacion < 20:
+        if self.time_limit > 0 and self.tiempo_juego >= self.time_limit:
             partida_terminada = True
         elif all(p.status == "entregado" for p in self.pedidos_disponibles):
             partida_terminada = True
@@ -461,14 +488,17 @@ class JuegoView:
         if partida_terminada:
             self._fin_juego_iniciado = True
             pygame.mixer.music.stop()
-            puntaje_final = self.calcular_puntaje_final()
 
-            if puntaje_final >= self.goal_income:
-                self.score_manager.agregar_puntaje(puntaje_final, "victoria")
-                self.onJugar("victoria", puntaje=puntaje_final)
+            puntaje_jugador = self.calcular_puntaje_final()
+            puntaje_ia = self.repartidor_ia.puntaje
+
+            # Comparar puntajes
+            if puntaje_jugador >= puntaje_ia:
+                self.score_manager.agregar_puntaje(puntaje_jugador, "victoria")
+                self.onJugar("victoria", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
             else:
-                self.score_manager.agregar_puntaje(puntaje_final, "derrota")
-                self.onJugar("derrota", puntaje=puntaje_final)
+                self.score_manager.agregar_puntaje(puntaje_jugador, "derrota")
+                self.onJugar("derrota", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
 
     def calcular_puntaje_final(self):
         score_base = self.repartidor.puntaje

@@ -1,11 +1,12 @@
 import pygame
 
 class PantallaDerrota:
-    def __init__(self, pantalla, puntaje, onJugar, onVolver=None):
+    def __init__(self, pantalla, puntaje, onJugar, onVolver=None, puntaje_ia=0):
         self.pantalla = pantalla
         self.puntaje = puntaje
+        self.puntaje_ia = puntaje_ia
         self.onJugar = onJugar
-        self.onVolver = onVolver  # Guardamos la función que vuelve al menú
+        self.onVolver = onVolver
 
         self.font = pygame.font.SysFont(None, 52)
         self.btnFont = pygame.font.SysFont(None, 30)
@@ -19,7 +20,6 @@ class PantallaDerrota:
         self.btn_h = 52
         self.sep = 18
 
-        # Botones
         self.botones = [
             {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h),
              "texto": "Jugar de nuevo",
@@ -27,7 +27,7 @@ class PantallaDerrota:
              "hover": False},
             {"rect": pygame.Rect(0, 0, self.btn_w, self.btn_h),
              "texto": "Salir al menú",
-             "accion": self.onVolver,  # Se pasa desde main.py
+             "accion": self.onVolver,
              "hover": False}
         ]
 
@@ -71,14 +71,17 @@ class PantallaDerrota:
         w, h = self.pantalla.get_size()
 
         titulo_surf = self.title_font.render("¡Perdiste!", True, (220, 50, 50))
-        puntaje_surf = self.score_font.render(f"Puntaje: {self.puntaje}", True, (255, 200, 200))
+        puntaje_surf = self.score_font.render(f"Tu puntaje: {self.puntaje}", True, (255, 200, 200))
+        puntaje_ia_surf = self.score_font.render(f"Puntaje CPU: {self.puntaje_ia}", True, (150, 180, 220))
 
         gap = 24
         titulo_rect = titulo_surf.get_rect(center=(w // 2, h // 3))
         puntaje_rect = puntaje_surf.get_rect(midtop=(w // 2, titulo_rect.bottom + gap))
+        puntaje_ia_rect = puntaje_ia_surf.get_rect(midtop=(w//2, puntaje_rect.bottom + 10))
 
         self.pantalla.blit(titulo_surf, titulo_rect)
         self.pantalla.blit(puntaje_surf, puntaje_rect)
+        self.pantalla.blit(puntaje_ia_surf, puntaje_ia_rect)
 
         for b in self.botones:
             color = self.btnHover if b["hover"] else self.btnColor

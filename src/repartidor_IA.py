@@ -152,7 +152,6 @@ class RepartidorIA(Repartidor):
         self.decision_timer += dt
         if self.estado == "BUSCANDO_PEDIDO":
             if self.decision_timer >= self.intervalo_decision:
-                print("\n--- CICLO DE DECISIÓN IA (DIFICIL) ---")
                 self.decision_timer = 0
                 pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time]
                 mejor_pedido = self._seleccionar_mejor_pedido(pedidos_disponibles_ahora, city_map, tiempo_juego)
@@ -164,11 +163,7 @@ class RepartidorIA(Repartidor):
                         if ruta:
                             self.ruta_actual = ruta[1:]
                             self.estado = "YENDO_A_RECOGIDA"
-                            print(f"IA [DIFÍCIL] objetivo {self.objetivo_actual.id} fijado.")
-                        else:
-                            print("IA [ERROR]: No se encontró ruta hacia recogida.")
-                    else:
-                        print("IA [ERROR]: No hay casilla accesible para recogida.")
+
         elif self.estado in ["YENDO_A_RECOGIDA", "YENDO_A_ENTREGA"]:
             self._procesar_movimiento_con_ruta(city_map, weather, colliders, tiempo_juego)
 

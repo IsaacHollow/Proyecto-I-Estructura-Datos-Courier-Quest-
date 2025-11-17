@@ -27,7 +27,7 @@ font = pygame.font.Font(None, 36)
 
 current_view = None
 paused = False
-dificultad_cpu_actual = "facil"  # Valor por defecto
+dificultad_cpu_actual = "facil"
 
 
 def reproducir_musica(ruta):
@@ -63,21 +63,27 @@ def irAJuego(parametro=None, **kwargs):
 
     elif parametro == "victoria":
         puntaje = kwargs.get("puntaje", 0)
+        puntaje_ia = kwargs.get("puntaje_ia", 0)
         current_view = PantallaVictoria(
             screen,
             puntaje=puntaje,
+            puntaje_ia=puntaje_ia,
             onJugar=irAJugarModo,
             onVolver=volverAlMenu
         )
 
     elif parametro == "derrota":
         puntaje = kwargs.get("puntaje", 0)
+        puntaje_ia = kwargs.get("puntaje_ia", 0)
         current_view = PantallaDerrota(
             screen,
             puntaje=puntaje,
+            puntaje_ia=puntaje_ia,
             onJugar=irAJugarModo,
             onVolver=volverAlMenu
         )
+    elif parametro == "puntajes":
+        current_view = PantallaPuntaje(screen, WIDTH, HEIGHT, onVolver=volverAlMenu)
 
 
 def irAJugarModo():
@@ -119,7 +125,6 @@ while running:
                 volverAlMenu()
                 paused = False
 
-        # El nombre estandarizado es `manejar_evento`
         if current_view and hasattr(current_view, "manejar_evento"):
             current_view.manejar_evento(event)
         elif current_view and hasattr(current_view, "manejarEvento"):
