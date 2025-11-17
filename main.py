@@ -51,8 +51,7 @@ def irAJuego(parametro=None, **kwargs):
 
     if parametro == "cargar_juego":
         estado = kwargs.get("estado_cargado")
-        dificultad = kwargs.get("dificultad", "facil")
-        current_view = JuegoView(screen, onJugar=irAJuego, estado_cargado=estado, dificultad_cpu=dificultad)
+        current_view = JuegoView(screen, onJugar=irAJuego, estado_cargado=estado)
         reproducir_musica("assets/music/game_theme.mp3")
         return
 

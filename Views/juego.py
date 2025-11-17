@@ -30,24 +30,33 @@ class JuegoView:
         self.pedidos_disponibles = pedidos_disponibles
         self.onJugar = onJugar
         self.save_manager = SaveManager()
-        self.dificultad_cpu = dificultad_cpu
         self.pre_juego = True
         self.contador_inicio = 4
         self.timer_contador = 0
         self.tiempo_por_numero = 1.0
-        self.mostrar_numero = True  # para controlar cuando desaparecer
+        self.mostrar_numero = True
 
         if estado_cargado:
+            # Lógica de carga de partida robusta
             self.city_map = estado_cargado.city_map
             self.pedidos_disponibles = estado_cargado.pedidos_actuales
             self.tiempo_juego = estado_cargado.tiempo_juego
             self.repartidor = estado_cargado.repartidor
             self.weather = estado_cargado.weather
-            start_tile_x_cpu = self.city_map.width // 2 + 1
-            start_tile_y_cpu = self.city_map.height // 2
-            self.repartidor_ia = RepartidorIA(start_tile_x_cpu, start_tile_y_cpu, TILE_WIDTH, self.dificultad_cpu)
             self._pedidos_iniciales_sesion = estado_cargado.pedidos_iniciales
+
+            # Carga segura para la IA y la dificultad
+            self.dificultad_cpu = getattr(estado_cargado, 'dificultad_cpu', 'facil')
+            self.repartidor_ia = getattr(estado_cargado, 'repartidor_ia', None)
+
+            if not self.repartidor_ia:
+                # Si no había IA en el guardado, se crea una nueva
+                start_tile_x_cpu = self.city_map.width // 2 + 1
+                start_tile_y_cpu = self.city_map.height // 2
+                self.repartidor_ia = RepartidorIA(start_tile_x_cpu, start_tile_y_cpu, TILE_WIDTH, self.dificultad_cpu)
+
         else:
+            # Lógica de nueva partida
             if city_map is None or pedidos_disponibles is None:
                 raise ValueError("Se requiere 'city_map' y 'pedidos_disponibles' para una nueva partida.")
 
@@ -55,13 +64,12 @@ class JuegoView:
             self.pedidos_disponibles = pedidos_disponibles
             self._pedidos_iniciales_sesion = list(pedidos_disponibles)
             self.tiempo_juego = 0.0
+            self.dificultad_cpu = dificultad_cpu
 
-            # Jugador Humano
             start_tile_x = self.city_map.width // 2
             start_tile_y = self.city_map.height // 2
             self.repartidor = Repartidor(start_tile_x, start_tile_y, TILE_WIDTH)
 
-            # Jugador IA
             start_tile_x_cpu = self.city_map.width // 2 + 1
             start_tile_y_cpu = self.city_map.height // 2
             self.repartidor_ia = RepartidorIA(start_tile_x_cpu, start_tile_y_cpu, TILE_WIDTH, self.dificultad_cpu)
@@ -125,7 +133,6 @@ class JuegoView:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F5:
                 self.guardar_estado_actual(1)
-                print("¡Partida guardada!")
             if event.key == pygame.K_z:
                 self.intentar_interaccion()
             elif event.key in (pygame.K_LCTRL, pygame.K_RCTRL):
@@ -344,7 +351,6 @@ class JuegoView:
                     pedido.status = "en curso"
                     pedido.holder = "human"
                     pedido.cargar_sprite((PEDIDO_SIZE, PEDIDO_SIZE))
-                    print(f"Pedido {pedido.id} recogido por el jugador")
                     return
             # Entregar pedido
             elif pedido.status == "en curso" and holder == "human" and self.estan_adyacentes(pos_repartidor,
@@ -352,7 +358,6 @@ class JuegoView:
                 if self.repartidor.inventario.entregar_pedido(pedido):
                     pedido.status = "entregado"
                     self.procesar_pago_y_reputacion(self.repartidor, pedido)
-                    print(f"Pedido {pedido.id} entregado por el jugador")
                     return
 
     def procesar_pago_y_reputacion(self, repartidor_obj, pedido):
@@ -390,10 +395,10 @@ class JuegoView:
         if repartidor_obj is self.repartidor:
             if baja_critica and not self._fin_juego_iniciado:
                 self._fin_juego_iniciado = True
-                self.onJugar("derrota", puntaje=self.repartidor.puntaje)
-            elif self.repartidor.puntaje >= self.goal_income and not self._fin_juego_iniciado:
-                self._fin_juego_iniciado = True
-                self.onJugar("victoria", puntaje=self.repartidor.puntaje)
+                puntaje_jugador = self.calcular_puntaje_final()
+                puntaje_ia = self.repartidor_ia.puntaje
+                self.score_manager.agregar_puntaje(puntaje_jugador, "derrota")
+                self.onJugar("derrota", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
 
     def actualizar(self, dt):
         if self.pre_juego:
@@ -451,10 +456,11 @@ class JuegoView:
         if self._fin_juego_iniciado:
             return
 
-        # Verificar si alguno de los dos jugadores alcanzó la meta
+        # Verificar si alguno de los dos jugadores alcanzó el goal_income
         jugador_alcanzo_meta = self.repartidor.puntaje >= self.goal_income
         ia_alcanzo_meta = self.repartidor_ia.puntaje >= self.goal_income
 
+        # Si alguno alcanzó la meta, ese gana inmediatamente
         if jugador_alcanzo_meta or ia_alcanzo_meta:
             self._fin_juego_iniciado = True
             pygame.mixer.music.stop()
@@ -463,13 +469,15 @@ class JuegoView:
             puntaje_ia = self.repartidor_ia.puntaje
 
             if jugador_alcanzo_meta and not ia_alcanzo_meta:
+                # Solo el jugador alcanzó la meta
                 self.score_manager.agregar_puntaje(puntaje_jugador, "victoria")
                 self.onJugar("victoria", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
-
             elif ia_alcanzo_meta and not jugador_alcanzo_meta:
+                # Solo la IA alcanzó la meta
                 self.score_manager.agregar_puntaje(puntaje_jugador, "derrota")
                 self.onJugar("derrota", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
             else:
+                # Ambos alcanzaron la meta, comparar quien tiene más
                 if puntaje_jugador >= puntaje_ia:
                     self.score_manager.agregar_puntaje(puntaje_jugador, "victoria")
                     self.onJugar("victoria", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
@@ -478,7 +486,7 @@ class JuegoView:
                     self.onJugar("derrota", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
             return
 
-        # Si ninguno alcanzó la meta, se comparan puntuajes
+        # Condiciones de finalización sin alcanzar la meta
         partida_terminada = False
         if self.time_limit > 0 and self.tiempo_juego >= self.time_limit:
             partida_terminada = True
@@ -492,7 +500,7 @@ class JuegoView:
             puntaje_jugador = self.calcular_puntaje_final()
             puntaje_ia = self.repartidor_ia.puntaje
 
-            # Comparar puntajes
+            # Nadie alcanzó la meta, comparar puntajes
             if puntaje_jugador >= puntaje_ia:
                 self.score_manager.agregar_puntaje(puntaje_jugador, "victoria")
                 self.onJugar("victoria", puntaje=puntaje_jugador, puntaje_ia=puntaje_ia)
@@ -518,8 +526,9 @@ class JuegoView:
             pedidos_iniciales=self._pedidos_iniciales_sesion,
             tiempo_juego=self.tiempo_juego,
             repartidor=self.repartidor,
+            repartidor_ia=self.repartidor_ia,
             pedidos_actuales=self.pedidos_disponibles,
-            weather=self.weather
+            weather=self.weather,
+            dificultad_cpu=self.dificultad_cpu
         )
         self.save_manager.guardar_partida(estado, slot)
-
