@@ -30,28 +30,77 @@ class RepartidorIA(Repartidor):
                                           pedidos_disponibles, tiempo_juego, colliders)
             return
 
-        # FÁCIL: random walk
         if self.dificultad == "facil":
-            self._ejecutar_logica_simple(dt, city_map, colliders, weather)
+            self._ejecutar_logica_simple(dt, city_map, colliders, weather, pedidos_disponibles, tiempo_juego)
             return
 
-        # MEDIO: greedy best-first (elige pedidos y sigue rutas con A*)
         if self.dificultad == "medio":
             self._ejecutar_logica_media(dt, city_map, colliders, weather, pedidos_disponibles, tiempo_juego)
             return
 
-
-    #DIFICULTAD FACIL
-
-    def _ejecutar_logica_simple(self, dt, city_map, colliders, weather):
+    def _ejecutar_logica_simple(self, dt, city_map, colliders, weather, pedidos: List[Pedido], tiempo_juego: float):
+        self.decision_timer += dt
         self.movimiento_timer += dt
+
+        # Intenta interactuar si está cerca
+        if not self.is_moving and self.objetivo_actual:
+            if self.estado == "YENDO_A_RECOGIDA":
+                if abs(self.tile_x - self.objetivo_actual.pickup[0]) + abs(
+                        self.tile_y - self.objetivo_actual.pickup[1]) <= 1:
+                    self._intentar_recoger(city_map)
+            elif self.estado == "YENDO_A_ENTREGA":
+                if abs(self.tile_x - self.objetivo_actual.dropoff[0]) + abs(
+                        self.tile_y - self.objetivo_actual.dropoff[1]) <= 1:
+                    self._intentar_entregar(tiempo_juego)
+
         if self.movimiento_timer >= self.intervalo_movimiento_simple and not self.is_moving:
             self.movimiento_timer = 0
-            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
-            self.start_move(dx, dy, city_map, colliders, weather)
+
+            # Si no tiene un objetivo, o si se ha "aburrido" de perseguirlo, busca uno nuevo.
+            if self.estado == "BUSCANDO_PEDIDO" or (
+                    self.objetivo_actual and self.decision_timer > 20):  # Re-evalúa cada 20 segundos
+                self.decision_timer = 0
+                # Busca un pedido al azar solo si no está ya en camino a entregar algo
+                if self.estado != "YENDO_A_ENTREGA":
+                    pedidos_disponibles_ahora = [p for p in pedidos if
+                                                 p.status == "pendiente" and p.holder is None and tiempo_juego >= p.release_time]
+                    if pedidos_disponibles_ahora:
+                        self.objetivo_actual = random.choice(pedidos_disponibles_ahora)
+                        self.estado = "YENDO_A_RECOGIDA"
+                    else:  # Si no hay pedidos, resetea
+                        self._reset_estado()
+
+            # Moverse hacia el objetivo o de forma aleatoria
+            if self.objetivo_actual:
+                target_pos = self.objetivo_actual.pickup if self.estado == "YENDO_A_RECOGIDA" else self.objetivo_actual.dropoff
+
+                dx = target_pos[0] - self.tile_x
+                dy = target_pos[1] - self.tile_y
+
+                # Movimiento errático: prioriza la dirección correcta pero puede desviarse
+                possible_moves = []
+                if dx > 0: possible_moves.extend([(1, 0)] * 8)
+                if dx < 0: possible_moves.extend([(-1, 0)] * 8)
+                if dy > 0: possible_moves.extend([(0, 1)] * 8)
+                if dy < 0: possible_moves.extend([(0, -1)] * 8)
+
+                # Añadir movimientos laterales para simular error o aleatoriedad
+                if dx != 0:
+                    possible_moves.extend([(0, 1), (0, -1)])
+                if dy != 0:
+                    possible_moves.extend([(1, 0), (-1, 0)])
+
+                if not possible_moves:
+                    possible_moves = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+
+                move = random.choice(possible_moves)
+                self.start_move(move[0], move[1], city_map, colliders, weather)
+
+            else:  # Si no hay objetivo, movimiento 100% aleatorio
+                dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+                self.start_move(dx, dy, city_map, colliders, weather)
 
     # DIFICULTAD MEDIA
-
     def _ejecutar_logica_media(self, dt, city_map, colliders, weather, pedidos: List[Pedido], tiempo_juego: float):
 
         if self.estado in ["YENDO_A_RECOGIDA", "YENDO_A_ENTREGA"]:
@@ -72,7 +121,9 @@ class RepartidorIA(Repartidor):
             return
 
         self.decision_timer = 0
-        pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time and p.status == "pendiente" and (getattr(p, "holder", None) in (None,))]
+        pedidos_disponibles_ahora = [p for p in pedidos if
+                                     tiempo_juego >= p.release_time and p.status == "pendiente" and (
+                                                 getattr(p, "holder", None) in (None,))]
         mejor_pedido = self._seleccionar_pedido_greedy(pedidos_disponibles_ahora, city_map, tiempo_juego, weather)
         if mejor_pedido:
             self.objetivo_actual = mejor_pedido
@@ -92,7 +143,8 @@ class RepartidorIA(Repartidor):
             if 0 <= nx < city_map.width and 0 <= ny < city_map.height and not city_map.tiles[ny][nx].type.blocked:
                 self.start_move(dx, dy, city_map, colliders, weather)
 
-    def _seleccionar_pedido_greedy(self, pedidos_validos: List[Pedido], city_map: CityMap, tiempo_juego: float, weather) -> Optional[Pedido]:
+    def _seleccionar_pedido_greedy(self, pedidos_validos: List[Pedido], city_map: CityMap, tiempo_juego: float,
+                                   weather) -> Optional[Pedido]:
 
         if not pedidos_validos:
             return None
@@ -143,41 +195,47 @@ class RepartidorIA(Repartidor):
 
         return mejor
 
-
     # DIFICULTAD DIFICIL
 
     def _ejecutar_logica_dificil(self, dt, city_map, weather, pedidos: List[Pedido],
                                  tiempo_juego: float, colliders):
-
         self.decision_timer += dt
+
         if self.estado == "BUSCANDO_PEDIDO":
-            if self.decision_timer >= self.intervalo_decision:
-                print("\n--- CICLO DE DECISIÓN IA (DIFICIL) ---")
-                self.decision_timer = 0
-                pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time]
-                mejor_pedido = self._seleccionar_mejor_pedido(pedidos_disponibles_ahora, city_map, tiempo_juego)
-                if mejor_pedido:
-                    self.objetivo_actual = mejor_pedido
-                    casilla_recogida = encontrar_casilla_accesible_adyacente(self.objetivo_actual.pickup, city_map)
-                    if casilla_recogida:
-                        ruta = a_star_pathfinding((self.tile_x, self.tile_y), casilla_recogida, city_map)
-                        if ruta:
-                            self.ruta_actual = ruta[1:]
-                            self.estado = "YENDO_A_RECOGIDA"
-                            print(f"IA [DIFÍCIL] objetivo {self.objetivo_actual.id} fijado.")
-                        else:
-                            print("IA [ERROR]: No se encontró ruta hacia recogida.")
-                    else:
-                        print("IA [ERROR]: No hay casilla accesible para recogida.")
+            # Si no está en movimiento, puede tomar una decisión
+            if not self.is_moving:
+                # Cada cierto tiempo, intenta buscar un nuevo pedido
+                if self.decision_timer >= self.intervalo_decision:
+                    self.decision_timer = 0
+                    pedidos_disponibles_ahora = [p for p in pedidos if tiempo_juego >= p.release_time]
+                    mejor_pedido = self._seleccionar_mejor_pedido(pedidos_disponibles_ahora, city_map, tiempo_juego)
+
+                    if mejor_pedido:
+                        self.objetivo_actual = mejor_pedido
+                        casilla_recogida = encontrar_casilla_accesible_adyacente(self.objetivo_actual.pickup, city_map)
+                        if casilla_recogida:
+                            ruta = a_star_pathfinding((self.tile_x, self.tile_y), casilla_recogida, city_map)
+                            if ruta:
+                                self.ruta_actual = ruta[1:]
+                                self.estado = "YENDO_A_RECOGIDA"
+                                # Inicia el movimiento inmediatamente si encuentra ruta
+                                self._seguir_ruta(city_map, weather, colliders)
+                        return  # Termina el ciclo de decisión
+
+                # Si no encontró pedido o no es tiempo de decidir, se mueve aleatoriamente
+                dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+                self.start_move(dx, dy, city_map, colliders, weather)
+
         elif self.estado in ["YENDO_A_RECOGIDA", "YENDO_A_ENTREGA"]:
             self._procesar_movimiento_con_ruta(city_map, weather, colliders, tiempo_juego)
-
 
     # Procesamiento de ruta comun
 
     def _procesar_movimiento_con_ruta(self, city_map, weather, colliders, tiempo_juego):
         # Si objetivo fue tomado por otro, resetear
-        if not self.objetivo_actual or (self.estado == "YENDO_A_RECOGIDA" and getattr(self.objetivo_actual, "holder", None) not in (None, "cpu_pending")):
+        if not self.objetivo_actual or (
+                self.estado == "YENDO_A_RECOGIDA" and getattr(self.objetivo_actual, "holder", None) not in (None,
+                                                                                                            "cpu_pending")):
             # liberar si lo teníamos pendiente
             if self.objetivo_actual:
                 try:
@@ -216,8 +274,8 @@ class RepartidorIA(Repartidor):
         self.ruta_actual = []
         self.decision_timer = 0
 
-
-    def _seleccionar_mejor_pedido(self, pedidos_disponibles: List[Pedido], city_map: CityMap, tiempo_juego: float) -> Optional[Pedido]:
+    def _seleccionar_mejor_pedido(self, pedidos_disponibles: List[Pedido], city_map: CityMap, tiempo_juego: float) -> \
+    Optional[Pedido]:
         pedidos_validos = [p for p in pedidos_disponibles if p.status == "pendiente" and p.holder is None]
         if not pedidos_validos:
             return None
@@ -264,6 +322,7 @@ class RepartidorIA(Repartidor):
 
     def _intentar_recoger(self, city_map: CityMap):
         if not self.objetivo_actual:
+            self._reset_estado()
             return
 
         if abs(self.tile_x - self.objetivo_actual.pickup[0]) + abs(self.tile_y - self.objetivo_actual.pickup[1]) <= 1:
@@ -271,23 +330,27 @@ class RepartidorIA(Repartidor):
                 self.objetivo_actual.status = "en curso"
                 self.objetivo_actual.holder = "cpu"
 
-                casilla_entrega = encontrar_casilla_accesible_adyacente(self.objetivo_actual.dropoff, city_map)
-                if casilla_entrega:
-                    ruta_entrega = a_star_pathfinding((self.tile_x, self.tile_y), casilla_entrega, city_map)
-                    if ruta_entrega:
-                        self.ruta_actual = ruta_entrega[1:]
-                        self.estado = "YENDO_A_ENTREGA"
+                self.estado = "YENDO_A_ENTREGA"
+                self.decision_timer = 0
+
+                if self.dificultad in ["medio", "dificil"]:
+                    casilla_entrega = encontrar_casilla_accesible_adyacente(self.objetivo_actual.dropoff, city_map)
+                    if casilla_entrega:
+                        ruta_entrega = a_star_pathfinding((self.tile_x, self.tile_y), casilla_entrega, city_map)
+                        if ruta_entrega:
+                            self.ruta_actual = ruta_entrega[1:]
+                        else:
+                            self._reset_estado()
                     else:
                         self._reset_estado()
-                else:
-                    self._reset_estado()
-            else:
+            else:  # No pudo agregarlo al inventario (ej. por peso)
                 self._reset_estado()
         else:
             self._reset_estado()
 
     def _intentar_entregar(self, tiempo_juego: float):
         if not self.objetivo_actual:
+            self._reset_estado()
             return
 
         if abs(self.tile_x - self.objetivo_actual.dropoff[0]) + abs(self.tile_y - self.objetivo_actual.dropoff[1]) <= 1:
