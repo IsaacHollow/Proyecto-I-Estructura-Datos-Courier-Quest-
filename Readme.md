@@ -2,7 +2,7 @@
 # Courier Quest — EIF-207 (Ciclo II, 2025)
 # Courier Quest II (Apartir de la liena 295)
 
-Deben	 incluir	 un	 archivo	 README.md	 con	 información	 general	 del	 proyecto,	
+Deben incluir un archivo README.md con información general del proyecto,	
 incluyendo	las	estructuras	de	datos	que	utilizaron	y	para	qué	partes	del	programa.	
 Así	como	detalles	de	la	complejidad	algorítmica	
 
@@ -15,11 +15,11 @@ Hernán Sánchez Chaves
 
 ___________________________________________________________________________________________________
 
-# Libreria escogida:
+# Librería escogida:
 Pygame
 
 # Motivo:  
-Despues de mirar varias opciones como Arcade o cocos2d, 
+Después de mirar varias opciones como Arcade o cocos2d, 
 elegimos Pygame porque es facil de usar, hay muchos ejemplos 
 y nos deja manejar bien los dibujos, sonidos y la logica del juego.
 
@@ -45,6 +45,14 @@ Pygame
 Acceso a internet para cargar mapas y pedidos desde API  
 
 ___________________________________________________________________________________________________
+
+# IMPORTANTE:
+Al tiempo del juego se le aplicó un factor de aceleracion x3, esto debido a que el tiempo dado por la API es excesivamente alto para la poca cantidad de pedidos que existen.
+El tiempo de salida de cada pedido se ajusta al tiempo de partida, 
+y esto hace que el jugador tenga que esperar varios minutos sin hacer absolutamente nada hasta que aparezca el proximo pedido a entregar.
+
+Si bien esto hace que no sigamos estrictamente la información dada por la API, aparte de implementar estructuras de datos y analisis de complejidades algoritmicas,
+también nos preocupamos porque el resultado final del juego sea de calidad, no solo a nivel de codigo sino también de jugabilidad.
 
 # Estructuras y rendimiento del juego:
 ---
@@ -363,4 +371,4 @@ La clase RepartidorIA implementa 3 niveles de dificultad que combinan pathfindin
 - Se adapta bien a pantallas de menú típicas
 
 
-# Fecha de entrega proyecto #2:  16 de noviembre 2025
+# Fecha de entrega proyecto #2:  17 de noviembre 2025

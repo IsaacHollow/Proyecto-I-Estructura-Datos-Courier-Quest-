@@ -1,18 +1,82 @@
-DIFICULTAD DIFICIL
+DIFICULTAD DIFICIL:
 
-Explicación Detallada: Implementación del Pathfinding A* y el Repartidor IA
+La dificultad dificil es el algoritmo más avanzado/inteligente de las tres dificultades que implementamos.
+Para su creacion e implementacion utilizamos ayuda de IA para crear el archivo pathfinding_A.py
+
+Primero se le pidió información sobre las dos opciones posibles para el algoritmo de esta dificultad (Dijkstra o A*) con el siguiente prompt:
+
+    "Tengo un proyecto sobre un juego de repartidor por una ciudad, el repartidor posee un inventario donde puede observar sus paquetes actuales así como poder seleccionar uno para visualizar su ubicacion de entrega,
+    recoger mas paquetes y entregarlos, tiene un movimiento por casillas y el mapa es una matriz grande de casillas con diferentes propiedades.
+    El jugador se enfrenta a una IA con 3 niveles de dificultad diferentes quiero hacer la dificultad dificil la cual tiene las siguientes indicaciones:
+    
+    [Indicaciones para la dificultad dificil dadas en el enunciado del proyecto]
+    
+    Antes de implementar quiero que me recomiendes que metodo de busqueda de rutas usar entre dijkstra y A* y por qué la opcion elegida sería mejor para mi proyecto."
+
+La IA no solo nos recomendó usar A* para dicha dificultad, si no tambien su heuristica, la Distancia de Manhattan.
+A continuacion un resumen de la respuesta:
+
+    "Para tu proyecto, la recomendación clara y directa es usar el *algoritmo A (A-star)**. Es más eficiente y está mejor adaptado para el problema que el CPU necesita resolver."
+
+    "El Algoritmo de Dijkstra:
+
+    ¿Qué hace? El algoritmo de Dijkstra encuentra el camino más corto desde un nodo de inicio hasta todos los demás nodos en un grafo ponderado
+    
+    -Fortalezas:
+        Garantiza encontrar el camino más corto (si los pesos de las aristas no son negativos, lo cual es tu caso).
+        Es útil si necesitas saber la distancia desde un punto a múltiples destinos a la vez.
+
+    -Debilidades en tu proyecto:
+        Es ineficiente. El CPU casi siempre tiene un único objetivo: "ir al punto de recogida X" o "ir al punto de entrega Y". 
+        Dijkstra perderá mucho tiempo y recursos computacionales explorando caminos que se alejan del objetivo..
+    
+    El Algoritmo A* (A-star)
+
+    ¿Qué hace?:
+    A* encuentra el camino más corto desde un nodo de inicio hasta un único nodo de destino.
+    ¿Cómo funciona?:
+    A* es esencialmente una versión "inteligente" de Dijkstra. Al igual que Dijkstra, calcula el costo real del camino recorrido desde el inicio hasta la casilla actual (esto se llama g(n)).
+    
+    Pero, además, añade una heurística: una estimación del costo que queda desde la casilla actual hasta el destino (esto se llama h(n)).
+
+    La fórmula es: f(n) = g(n) + h(n)
+    g(n) = Costo real desde el inicio hasta la casilla n.
+    h(n) = Costo estimado desde la casilla n hasta el destino.
+
+    La Heurística (La Magia de A)**: Para un mapa de cuadrícula como el tuyo, la heurística más común y efectiva es la distancia de Manhattan. Esta simplemente calcula la distancia horizontal y vertical entre dos puntos, ignorando los obstáculos. Es muy rápida de calcular: h(n) = abs(n.x - destino.x) + abs(n.y - destino.y).
+    Como nunca sobreestima el costo real (el camino más corto nunca será menor que la distancia en línea recta sin obstáculos), A garantiza encontrar el camino óptimo.
+
+    Fortalezas en tu proyecto:
+        Es muy eficiente. Gracias a la heurística, A* prioriza los caminos que parecen dirigirse hacia el destino. No pierde tiempo explorando en direcciones obviamente incorrectas, lo que reduce drásticamente el número de casillas que necesita evaluar.
+        Está diseñado para un solo objetivo. El problema del CPU ("ir de A a B") es exactamente el caso de uso para el que se creó A*.
+
+
+Para resumir, el algoritmo A* es mejor para nuestro proyecto dado que el CPU siempre tendrá un objetivo claro (recoger y entregar de un punto A a un punto B).
+A* permitirá calcular la ruta mas corta de manera mas rapida y con menos consumo de recursos que Dijsktra, sobre todo al utilizar la distancia de Manhattan como heuristica.
+
+-------------
+
+El codigo para la implementacion del Pathfinding A* fue hecho en gran parte por IA, quien además nos recomendó utilizar la librería "heapq" para usar una cola de prioridad de minimo.
+
+Por lo tanto, pedimos la suficiente explicacion para comprender como funcionaba, no solo con fines educativos, sino también para poder implementarlo de manera correcta con el repartidor_IA que ya teníamos.
+
+A continuacion una explicacion detallada de todo el algoritmo, su funcionamiento y ciclo de ejecucion.
+
 
 1. El Algoritmo A* (src/pathfinding_A.py)
 ¿Qué es A*?
 
-A* (A-Star) es un algoritmo de búsqueda de caminos que encuentra la ruta más corta entre dos puntos en un grafo (en este caso, un mapa en cuadrícula). Lo que hace especial a A* es que es inteligente: no explora todas las direcciones por igual, sino que prioriza las que parecen más prometedoras.
-Componentes Clave del Algoritmo
+A* (A-Star) es un algoritmo de búsqueda de caminos que encuentra la ruta más corta entre dos puntos en un grafo (en este caso, un mapa en cuadrícula).
+Lo que hace especial a A* es que es inteligente: no explora todas las direcciones por igual, sino que prioriza las que parecen más prometedoras.
+
+Componentes Clave del Algoritmo:
 
 a. La Heurística
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-Esta función calcula la distancia Manhattan entre dos puntos. Es una estimación de cuántas casillas faltan para llegar al destino si pudieras moverte en línea recta (sin considerar obstáculos). Por ejemplo:
+Esta función calcula la distancia Manhattan entre dos puntos. Es una estimación de cuántas casillas faltan para llegar al destino si pudiera mover en línea recta (sin considerar obstáculos).
+Por ejemplo:
 
     Desde (5, 5) hasta (8, 9): |8-5| + |9-5| = 3 + 4 = 7 casillas.
 
@@ -37,7 +101,8 @@ c. El Open Set (Cola de Prioridad)
 open_set = []
 heapq.heappush(open_set, (0, start_pos))
 
-Es una cola de prioridad implementada con un heap. Siempre extrae la casilla con el f_score más bajo (la más prometedora). Esto es lo que hace a A* tan eficiente: siempre explora primero los caminos que parecen llevar más rápido a la meta.
+Es una cola de prioridad implementada con un heap. Siempre extrae la casilla con el f_score más bajo (la más prometedora).
+Esto es lo que hace a A* tan eficiente: siempre explora primero los caminos que parecen llevar más rápido a la meta.
 
 
 d. El Bucle Principal
@@ -46,7 +111,7 @@ while open_set:
     _, current_pos = heapq.heappop(open_set)
     
     if current_pos == goal_pos:
-        # ¡Llegamos! Reconstruir la ruta
+        # Llegamos, reconstruimos la ruta
         ...
     
     # Explorar vecinos
@@ -110,8 +175,8 @@ def encontrar_casilla_accesible_adyacente(pos_edificio, city_map):
 
 Los paquetes están dentro de edificios (casillas bloqueadas tipo "B"), pero los repartidores solo pueden moverse por calles. Esta función encuentra la casilla de calle adyacente al edificio, que es desde donde el repartidor puede "recoger" o "entregar" el paquete.
 
-
-3. El Repartidor IA (src/repartidor_IA.py)
+Cabe destacar que el archivo utilidades.py se planeó como un conjunto de funciones que nos ayudarían en diferentes partes del codigo, pero al final solo declaramos e implementamos una funcion en el.
+Decidimos dejarlo solo para aislar la funcion para casillas accesibles adyecentes.
 
 
 4. Flujo Detallado de la IA Difícil
@@ -179,7 +244,6 @@ Donde:
 - costo_penalizado = costo_total * 1.5 (penaliza rutas largas)
 - peso_penalizado = weight * 5 (penaliza paquetes pesados)
 - +1 al final evita división por cero
-
 
 
 Ejemplo de Evaluación:
@@ -266,19 +330,25 @@ Cada frame (60 veces por segundo), la IA:
     3.Si está en ruta, da un paso si no está en movimiento.
     4.Si llegó a un destino, intenta recoger/entregar.
 
+**********************************************************************************************************
+
 DIFICULTAD MEDIA
 
 PROMPTS
 
-"Quiero hacer la dificultad media del repartidor, se necesita utilizar, el comportamiento ocupa un horizonte de anticipación pequeño (2-3 acciones por delante), Evalúa movimientos potenciales con una función de puntuación simple, por ejemplo: score = α*(expected payout) – β*(distance cost) – γ*(weather penalty) Selecciona el movimiento con la puntuación máxima. Me puedes ayudar a decidir para este proyecto si utilizar “Greedy best-first”, Minimax o expectimax funciona. Me puedes explicar y mostrar los codigos y cual seria mejor utilizar"
+    "Quiero hacer la dificultad media del repartidor, se necesita utilizar, el comportamiento ocupa un horizonte de anticipación pequeño (2-3 acciones por delante), Evalúa movimientos potenciales con una función de puntuación simple, por ejemplo: score = α*(expected payout) – β*(distance cost) – γ*(weather penalty) Selecciona el movimiento con la puntuación máxima. Me puedes ayudar a decidir para este proyecto si utilizar “Greedy best-first”, Minimax o expectimax funciona. Me puedes explicar y mostrar los codigos y cual seria mejor utilizar"
 
-“Estoy intentando que la IA media no actúe igual que la dificultad difícil, porque siento que se está comportando casi igual y no puede usar A*.
-La idea es que la difícil sí use pathfinding y análisis completo, pero la media solo use evaluación local tipo greedy.
-¿Que puedo cambiar o qué tengo que mover para "disminuir" un poco la dificultad y que no se mezclen ambas dificultades?”
+Para un balance en la dificultad:
 
-Para la dificultad media decidimos utilizar para la toma de decisiones de la IA utilizamos Greedy Best-First. Decidimos no utilizar minimax ni expectimax porque Minimax requiere modelar al jugador humano como oponente y un árbol de juego grande, lo cual no aplica aquí.
+    “Estoy intentando que la IA media no actúe igual que la dificultad difícil, porque siento que se está comportando casi igual y no puede usar A*.
+    La idea es que la difícil sí use pathfinding y análisis completo, pero la media solo use evaluación local tipo greedy.
+    ¿Que puedo cambiar o qué tengo que mover para "disminuir" un poco la dificultad y que no se mezclen ambas dificultades?”
+
+Para la dificultad media en la toma de decisiones de la IA utilizamos Greedy Best-First. Decidimos no utilizar minimax ni expectimax porque Minimax requiere modelar al jugador humano como oponente y un árbol de juego grande, lo cual no aplica aquí.
 Expectimax es más costoso y se usa cuando hay incertidumbre probabilística.
-Greedy Best-First es suficiente, más simple, rápido y cumple exactamente lo que pide el profe lo de anticipación corta, evaluación y selección del mejor movimiento.
+Greedy Best-First es suficiente, más simple, rápido y cumple exactamente lo que pide el enunciado del proyecto, la anticipación corta, evaluación y selección del mejor movimiento.
+
+*****************************************************************************
 
 DIFICULTAD FACIL
 
@@ -294,9 +364,11 @@ El objetivo de la IA en dificultad Fácil es simular a un repartidor novato y di
     Poca "Memoria" y Distracción: Si pasa demasiado tiempo (unos 20 segundos) intentando llegar a un paquete sin éxito, "se aburre" y elige un nuevo objetivo al azar, simulando distracción o falta de constancia.
 
 En resumen, es un oponente que está en el juego y compite por los mismos recursos, pero sus errores y su falta de estrategia lo convierten en un primer desafío ideal sin ser demasiado abrumador.
-Implementación (¿Cómo lo hace?)
 
-La lógica se encuentra principalmente en la función _ejecutar_logica_simple dentro del archivo src/repartidor_IA.py. A continuación se desglosa su funcionamiento interno:
+Implementación (Cómo lo hace)
+
+La lógica se encuentra principalmente en la función _ejecutar_logica_simple dentro del archivo repartidor_IA.py. 
+A continuación se desglosa su funcionamiento interno:
 
     1.Ciclo de Decisión: La IA toma decisiones de movimiento a intervalos regulares, definidos por self.intervalo_movimiento_simple (0.5 segundos).
 
